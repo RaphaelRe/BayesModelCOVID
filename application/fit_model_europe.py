@@ -13,7 +13,7 @@ from basics import load_data, load_time_distribution, load_reporting_delay_distr
 
 
 PATH = os.getcwd()
-NB_CHAINS = 2
+NB_CHAINS = 8
 CORES = NB_CHAINS
 
 np.random.seed(seed=123)
@@ -27,18 +27,21 @@ def define_prior_values():
                         'alpha_mean': {'mean': 0, 'sd': 0.3},
                         'alpha_season_mean': {'mean': 0, 'sd': 0.3},
                         'alpha_sd': {'mean': 0, 'sd': 0.015},
-                        'tau': {'shape': 20 / 5, 'scale': 5},
+                        'tau': {'mean': None, 'sd': None},
+                        'tau_mean': {'shape': 10 / 1, 'scale': 1},
+                        'tau_sd': {'mean': 0, 'sd': 10},
                         'R0': {'mean': None, 'sd': None},
                         'R0_mean': {'mean': 3.25, 'sd': 0.05},
-                        'R0_sd': {'mean': 0, 'sd': 0.035},
+                        # 'R0_sd': {'mean': 0, 'sd': 0.035},
+                        'R0_sd': {'mean': 0, 'sd': 0.01},
                         'rho': {'a': 1, 'b': 1, 'scale': 3},
                         'phi_infections': {'inv_mean': 0, 'inv_sd': 0.015},
                         'phi_deaths': {'inv_mean': 0, 'inv_sd': 0.015},
                         'phi_hospitalizations': {'inv_mean': 0, 'inv_sd': 0.015},
                         'phi_intensiveCare': {'inv_mean': 0, 'inv_sd': 0.015},
                         'phi_rep_cases': {'inv_mean': 0, 'inv_sd': 0.015},
-                        'beta_alpha': {'mean': 0.4, 'sd': 0.01},
-                        'beta_delta': {'mean': 1.4, 'sd': 0.01},
+                        'beta_alpha': {'mean': 0.6, 'sd': 0.01},
+                        'beta_delta': {'mean': 1.5, 'sd': 0.01},
                         'beta_sat': {'min': 0, 'max': 10},
                         'beta_sun': {'min': 0, 'max': 10},
                         'beta_mon': {'min': 0, 'max': 10},
@@ -104,6 +107,13 @@ def define_start_values(file_name='data_europe.csv', rnd_seed=-1):
     data = load_data(f'{data_path}/{file_name}')
     # data.head().T
 
+    # make first eho_period longer to get better power
+    # rhotmp = data.rho_period.values
+    # rhotmp[(rhotmp == 1) | (rhotmp == 2)] = 2
+    # data.rho_period = rhotmp
+    # data.rho_period = data.rho_period - 1
+
+
     # drop summer since it is the reference and rename seasons to correct names
     data.drop('summer', axis=1, inplace=True)
     data.rename(columns={'winter': 'seasonWinter',
@@ -112,10 +122,15 @@ def define_start_values(file_name='data_europe.csv', rnd_seed=-1):
                 inplace=True)
 
     # define intervention names
-    used_interventions = ['closingSchools', 'cancelPublicEvents',
-                          'restrictGatherings', 'lockdown', 'subsequentLockdown',
+    used_interventions = ['closingSchools',
+                          'restrictGatherings',
+                          'lockdown',
+                          'subsequentLockdown',
                           'generalBehavioralChanges']
     used_interventions.extend(['seasonWinter', 'seasonSpring', 'seasonAutumn'])
+
+    print('Running the model with the following interventions:')
+    print(used_interventions)
 
     # # define start values as dict
     # define random functions to initialize differenz start values
@@ -126,23 +141,24 @@ def define_start_values(file_name='data_europe.csv', rnd_seed=-1):
 
     # # start vals
     start_vals = {'alpha': alpha_starts,
-                  'tau': 50 * rnd(),
                   'phi_infections': 5 * rnd(),
                   'phi_deaths': 5 * rnd(),
                   'phi_hospitalizations': 5,
                   'phi_intensiveCare': 5,
                   'phi_rep_cases': 5 * rnd(),
-                  'beta_alpha': 0.4,
-                  'beta_delta': 1.4,
+                  'beta_alpha': 0.6,
+                  'beta_delta': 1.5,
+                  'tau': {'tau_' + cc: 5 * rnd() for cc in data.country.unique()},
                   'piH': {'piH_' + cc: 0.9 * rnd() for cc in data.country.unique()},
                   'piHicu': {'piHicu_' + cc: 0.25 * rnd() for cc in data.country.unique()},
                   'R0': {'R0_' + country_key: 3.25 * rnd() for country_key in data['country'].unique()}
                   }
 
-    # # init mean effect for R0
-    start_vals['R0'].update({'R0_mean': 3.25, 'R0_sd': 0.01})
+    # init mean effect for R0 and tau
+    start_vals['R0'].update({'R0_mean': 3.28 * rnd(), 'R0_sd': 0.1 * rnd()})
+    start_vals['tau'].update({'tau_mean': 5 * rnd(), 'tau_sd': 5 * rnd()})
 
-    # # init rho
+    # init rho
     rhos = {}
     countries = data.country.unique()
     df_rhos = data[['rho_period', 'country']].drop_duplicates()
@@ -163,6 +179,13 @@ def define_start_values(file_name='data_europe.csv', rnd_seed=-1):
     betaD_Xi_tues = {'betaD_tue_' + country_key: 1.0 * rnd() for _, country_key in enumerate(data['country'].unique())}
     betaD_Xi_weds = {'betaD_wed_' + country_key: 1.0 * rnd() for _, country_key in enumerate(data['country'].unique())}
     betaD_Xi_fris = {'betaD_fri_' + country_key: 1.0 * rnd() for _, country_key in enumerate(data['country'].unique())}
+
+    # for france and spain specify better start values sice we have issues with numerical stability
+    beta_Xi_sats['beta_sat_France'] = 0.3
+    beta_Xi_suns['beta_sun_France'] = 0.3
+    beta_Xi_sats['beta_sat_Spain'] = 0.5
+    beta_Xi_suns['beta_sun_Spain'] = 0.1
+
     start_vals['beta_sat'] = beta_Xi_sats
     start_vals['beta_sun'] = beta_Xi_suns
     start_vals['beta_mon'] = beta_Xi_mons
@@ -219,9 +242,9 @@ def define_start_values(file_name='data_europe.csv', rnd_seed=-1):
                        'N_UnitedKingdom': 66650000
                        })
 
-    fixed_parameters['probability_reinfection'] = 0.16
-    fixed_parameters['correction_first_vaccination'] = 0.6
-    fixed_parameters['correction_second_vaccination'] = 0.3
+    fixed_parameters['probability_reinfection'] = 0.159
+    fixed_parameters['correction_first_vaccination'] = 0.5
+    fixed_parameters['correction_second_vaccination'] = 0.35
 
     # add pi_D
     pi_D_all = data[['country', 'ifr_t_m']]
@@ -244,7 +267,7 @@ def run_chain(chain, path, file_name, rnd_seed):
 
     Function initializes a MCMC object and lets the chain run
 
-    :param chain: An inteer indicating the j-th chain
+    :param chain: An string indicating the j-th chain, e.g. 'chain1'
     :param path: A string defining the path where the reults are written
     :param file_name: A string defining the used data
     :param rnd_seed: An integer which is used to initialize a random state for RNG
@@ -260,6 +283,12 @@ def run_chain(chain, path, file_name, rnd_seed):
                          'autumn': 'seasonAutumn'},
                 inplace=True)
 
+    # make first eho_period longer to get better power
+    # rhotmp = data.rho_period.values
+    # rhotmp[(rhotmp == 1) | (rhotmp == 2)] = 2
+    # data.rho_period = rhotmp
+    # data.rho_period = data.rho_period - 1
+
     # nowcasting not necessary, therefore 1
     data['pi_nd'] = 1
     data['pi_nc'] = 1
@@ -274,23 +303,19 @@ def run_chain(chain, path, file_name, rnd_seed):
     data = data.reset_index(drop=True)  # not necessary but I am superstitious
 
     # get the used interventions
-    used_interventions = ['closingSchools', 'cancelPublicEvents',
-                          'restrictGatherings', 'lockdown', 'subsequentLockdown',
-                          'generalBehavioralChanges']
+    used_interventions = ['closingSchools',
+                          'restrictGatherings',
+                          'lockdown',
+                          'subsequentLockdown',
+                          'generalBehavioralChanges'
+                          ]
     used_interventions.extend(['seasonWinter', 'seasonSpring', 'seasonAutumn'])
 
     prior_parameters = define_prior_values()
     proposal_sds = define_proposal_sds()
 
-    seed_generation_start_vals = np.random.randint(100, 1)
-    start_values = define_start_values(file_name, seed_generation_start_vals)
-
-    # check if pi_d and the data have the correct shape
-    len_piD = start_values['chain1']['pi_D'][next(iter(start_values['chain1']['pi_D']))].shape[0]
-    len_data = data[data.country == next(iter(start_values['chain1']['pi_D']))].shape[0]
-
-    if len_piD != len_data:
-        raise ValueError('Length of pi_D must be the same as the data for a country')
+    seed_generation_start_vals = np.random.randint(1, 100, 1)
+    start_values = {chain: define_start_values(file_name, seed_generation_start_vals)}
 
     model_specification = {'model': 'infections',
                            'interventions': used_interventions,
@@ -315,8 +340,10 @@ def run_chain(chain, path, file_name, rnd_seed):
     else:
         os.makedirs(path_results)
 
-    print('writing results to:')
+    print('==================================================================')
+    print('Writing results to:')
     print(path_results)
+    print('==================================================================')
 
     # check if countries do not have implemented all interventions,
     # if not delete them, this is actually not necessary for simulated data
@@ -342,9 +369,12 @@ def run_chain(chain, path, file_name, rnd_seed):
                 oos_country=None
                 )
 
-    # algo.run_adaptive_algorithm(iterations=50001 + 15000,
-                                # burnin=5000,
-                                # adaptive_phases=50,
+    # set good proposals (optional)
+    algo.set_proposal_sds("../data/proposal_sds_real_data.json")
+
+    # algo.run_adaptive_algorithm(iterations=5000,
+                                # burnin=20000,
+                                # adaptive_phases=10,
                                 # thin=100,
                                 # prediction_interval=300)
 
@@ -356,15 +386,18 @@ def run_chain(chain, path, file_name, rnd_seed):
 
 
 if __name__ == '__main__':
-    # np.seterr('ignore')
+    np.seterr('ignore')
 
-    seeds = np.random.randint(1000, size=NB_CHAINS)
+    seeds = np.random.randint(1, 10000, size=NB_CHAINS)
     path = f'{PATH}/results/'
-    data_file = f'{PATH}/../data/data_europe.csv'
+    data_file = '/real_data.csv'
 
     t = time.time()
-    import pudb; pu.db
-    run_chain('results')  # for debug
+    # one chain for debug
+    # import pudb; pu.db
+    # run_chain('chain1', path, data_file, 123)
 
     with multiprocessing.Pool(CORES) as pool:
-        res = pool.starmap(run_chain, [(chain + 1, path, data_file, rnd_seed) for chain, rnd_seed in enumerate(seeds)])
+        res = pool.starmap(run_chain, [(f'chain{i+1}', path, data_file, rnd_seed) for i, rnd_seed in enumerate(seeds)])
+
+    print("Full calculation time: " + str(time.time() - t))
