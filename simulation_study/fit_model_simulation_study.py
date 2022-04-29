@@ -305,16 +305,17 @@ def run_chains(path, file_name='data_sim_5NPIs_1.csv', nb_chains=1):
                     # oos_country=oos_country
                     )
 
-        # algo.run_adaptive_algorithm(iterations=50001+15000, burnin=5000,
-                                    # adaptive_phases=50, thin=100,
-                                    # prediction_interval=300)
-        algo.run_adaptive_algorithm(iterations=11, burnin=1,
-                                    adaptive_phases=0, thin=1,
-                                    prediction_interval=3)
+        algo.run_adaptive_algorithm(iterations=50001, burnin=20000,
+                                    adaptive_phases=10, thin=100,
+                                    prediction_interval=300)
+
+        # very short period to test, whether algo is sampling everything
+        # algo.run_adaptive_algorithm(iterations=11, burnin=1,
+                                    # adaptive_phases=0, thin=1,
+                                    # prediction_interval=3)
 
 
 if __name__ == '__main__':
-    # np.seterr('ignore')
     import multiprocessing
     t = time.time()
 
@@ -322,6 +323,7 @@ if __name__ == '__main__':
     # import pudb; pu.db
     # run_chains('results')
 
+    np.seterr('ignore')
     with multiprocessing.Pool(CORES) as pool:
         res = pool.starmap(run_chains, [(f'results/res_dataset_{i}', f'data_sim_5NPIs_{i}.csv', 2) for i in range(1, NB_DATASETS + 1)])
     print("Full calculation time: " + str(time.time() - t))

@@ -19,7 +19,6 @@ library(ggplot2)
 set.seed(123)
 
 # number of generated datasets
-N_DATASETS <- 20
 N_DATASETS <- 100
 
 ### other parameters

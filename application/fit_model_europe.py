@@ -13,7 +13,7 @@ from basics import load_data, load_time_distribution, load_reporting_delay_distr
 
 
 PATH = os.getcwd()
-NB_CHAINS = 8
+NB_CHAINS = 2
 CORES = NB_CHAINS
 
 np.random.seed(seed=123)
@@ -372,22 +372,22 @@ def run_chain(chain, path, file_name, rnd_seed):
     # set good proposals (optional)
     algo.set_proposal_sds("../data/proposal_sds_real_data.json")
 
-    # algo.run_adaptive_algorithm(iterations=5000,
-                                # burnin=20000,
-                                # adaptive_phases=10,
-                                # thin=100,
-                                # prediction_interval=300)
+    algo.run_adaptive_algorithm(iterations=50000,
+                                burnin=20000,
+                                adaptive_phases=10,
+                                thin=100,
+                                prediction_interval=300)
 
-    algo.run_adaptive_algorithm(iterations=11,
-                                burnin=1,
-                                adaptive_phases=0,
-                                thin=1,
-                                prediction_interval=3)
+    # short version. Can be used check whether the model is working and writes
+    # results
+    # algo.run_adaptive_algorithm(iterations=11,
+                                # burnin=1,
+                                # adaptive_phases=0,
+                                # thin=1,
+                                # prediction_interval=3)
 
 
 if __name__ == '__main__':
-    np.seterr('ignore')
-
     seeds = np.random.randint(1, 10000, size=NB_CHAINS)
     path = f'{PATH}/results/'
     data_file = '/real_data.csv'
@@ -397,6 +397,7 @@ if __name__ == '__main__':
     # import pudb; pu.db
     # run_chain('chain1', path, data_file, 123)
 
+    np.seterr('ignore')
     with multiprocessing.Pool(CORES) as pool:
         res = pool.starmap(run_chain, [(f'chain{i+1}', path, data_file, rnd_seed) for i, rnd_seed in enumerate(seeds)])
 
