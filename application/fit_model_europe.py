@@ -13,7 +13,7 @@ from basics import load_data, load_time_distribution, load_reporting_delay_distr
 
 
 PATH = os.getcwd()
-NB_CHAINS = 2
+NB_CHAINS = 8
 CORES = NB_CHAINS
 
 np.random.seed(seed=123)
