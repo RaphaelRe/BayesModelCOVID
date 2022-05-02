@@ -13,8 +13,8 @@ from basics import load_data, load_time_distribution, load_reporting_delay_distr
 
 
 PATH = os.getcwd()
-NB_DATASETS = 2
-CORES = 2
+NB_DATASETS = 10
+CORES = 10
 
 np.random.seed(seed=123)
 
