@@ -45,3 +45,4 @@ To run the model run the file
 Note that the calculation time and resources vary depending on the length of the chains, number of sampled chains and used cores.
 The simulation study parallelizes over the number of used datasets and runs the chains sequentially. For example one can use 20 cores for 20 datasets.
 The application parallelizes the calculation over the number of chains. For example, one can use 8 cores for 8 chains.
+Despite the parallelization over cores, the calculation time is rather high. The complexity of the model requires a sufficient number of iterations with thinning due to high autocorrelations. Also note that the written results require some free space (~3GB for the application and 67GB for the full simulation study).
