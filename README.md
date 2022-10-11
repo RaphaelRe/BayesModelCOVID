@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/479283964.svg)](https://zenodo.org/badge/latestdoi/479283964)
+
 A Bayesian hierarchical approach to account for reporting uncertainty, variants of concern and vaccination coverage when estimating the effects of non-pharmaceutical interventions on the spread of infectious disease
 -------------------------------------------------------------------------------
 
