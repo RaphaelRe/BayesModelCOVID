@@ -119,26 +119,6 @@ vacc_on_ifr <- 0.8 # 80% reduced ifr
 
 
 ### define piD
-################################## old versio n##################################
-
-# note: every country can use the same piD since it is deterministic
-piD <- rep(0.007, N_DAYS)
-# adapt it after 280+14, i.e. reduce it, to simulate vaccination
-piD[(281+14):N_DAYS] <- piD[(281+14):N_DAYS] * c(seq(1 ,0.1, len=N_DAYS-280-40-14), rep(0.1, 40))
-
-# add effect of variats of concern:
-# assume effect of alpha to be 50% and delta 100% more severe
-piD <- piD*proportion_original + piD*proportion_alpha*1.5 + piD*proportion_delta*2
-# plot(piD)
-
-# individual pi_D for each strata
-piD <- replicate(n_strata , piD)
-
-################################## ##################################
-
-################################## with different IFRs in each strata
-
-
 piD <- rep(0.003, N_DAYS) %>% replicate(n_strata, .)
 piD <- sapply(1:4, function(i) piD[, i]* i)
 rowMeans(piD)
@@ -739,14 +719,14 @@ ggplot(d_tmp[country == "countryA"])+
 
 ### generate N_DATASETS datasets with diffusion and without diffusion
 tt <- Sys.time()
-N_DATASETS <- 20
+
 set.seed(123)
 seeds <- sample(1:9999, N_DATASETS)
 
 datasets <- parallel::mcmapply(function(ds, seed){
                               generate_data(seed, write=T, path=paste0(PATH_DATA, "/simulated_data/diffusion/",ds), diffusion = T) 
                             }, 
-                            ds=paste0("data_sim_5NPIs_", 1:N_DATASETS, "_diffusion_varIFR.csv"),
+                            ds=paste0("data_sim_5NPIs_", 1:N_DATASETS, "_diffusion.csv"),
                             seed=seeds,
                             mc.cores = N_CORES, SIMPLIFY = F)
 

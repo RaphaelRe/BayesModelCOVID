@@ -5,7 +5,7 @@
 PATH_DATA = "../data/"
 
 N_CORES <- 5 # the number of used cores to generate data. Simulation time is not 
-             # THAT long but can save a view minutes if N_DATASETS is high
+# THAT long but can save a view minutes if N_DATASETS is high
 
 ### libraries
 library(data.table)
@@ -34,6 +34,16 @@ Xi_repC <- fread(paste0(PATH_DATA, "Xi_R_reporting_times_weekdays_estimated_lgl.
 Xi_D <- fread(paste0(PATH_DATA, "Xi_D_symptoms_to_death_weekdays.csv"))[[3]] # %>% append(rep(0,200))
 Xi_H <- fread(paste0(PATH_DATA, "XiH_all.csv"))[[1]] #  %>% append(rep(0,200))
 Xi_Hicu <- fread(paste0(PATH_DATA, "XiH_all.csv"))[[3]]#  %>% append(rep(0,200))
+
+
+## adapt reporting patterns for a part of the countries (assume that these countries use a reporting patter where they do not report anything on this specific day)
+# reported cases
+Xi_repC_2 <- lapply(1:7, function(day){
+  xi_tmp <- Xi_repC[[day]]
+  xi_tmp[seq(8-day, length(xi_tmp), by = 7)] <- 0
+  xi_tmp <- xi_tmp/sum(xi_tmp)
+}) %>% as.data.table %>% 
+  set_names(names(Xi_repC))
 
 
 ### define parameters for tau, each country has its own tau deviating from the overall
@@ -71,8 +81,8 @@ beta_delta <- 2.4
 # load fractions from approximated data, use UK, could anything, but Uk has 
 # a little bit more prevalence of delta
 vocs <- fread(paste0(PATH_DATA, "variants_of_concern.csv"))[country == "UnitedKingdom" ,
-                                          .(date, proportion_original, 
-                                            proportion_alpha, proportion_delta)][1:N_DAYS]
+                                                            .(date, proportion_original, 
+                                                              proportion_alpha, proportion_delta)][1:N_DAYS]
 # melt(vocs, id.vars="date") %>%
 #   ggplot(aes(date, value, color=variable))+geom_line()
 
@@ -239,7 +249,7 @@ generate_NPIs <- function(){
 
 # check mean influence on Rt
 3.25*exp(-sum(NPI_means[-5])) #  value is slightly > 1 implying a Rt > 1 but 
-                              # correction factors will push this below 1
+# correction factors will push this below 1
 
 
 
@@ -266,14 +276,23 @@ lines(grid, sigmoid(grid, bb0, bb5), type = "l", col=5)
 
 simulate_data_country <- function(seed=321){
   # This function simulates the data for ONE country using the objects from above
-  
   set.seed(seed)
+  
+  # sample the used reporting scheme for the country
+  reporting_scheme <- sample(c(T,F), 1)
+  
+  if (reporting_scheme) {
+    Xi_repC_m <- Xi_repC
+  } else {
+    Xi_repC_m <- Xi_repC_2
+  }
+  
   ### sample NPI effects
   NPIs <- generate_NPIs()
   
   data <- data.table(
     date = seq.Date(as.Date("2020-01-01"), by="day", len=N_DAYS)
-    )
+  )
   
   # add true NPI effects to know the truth
   data[, true_val_NPI1 := NPIs[1]]
@@ -292,10 +311,10 @@ simulate_data_country <- function(seed=321){
   R0_t <- R0*proportion_original + 
     proportion_alpha*R0*beta_alpha + 
     proportion_delta*R0*beta_delta
-
+  
   ### sample 1st value, i.e. index cases from poisson with rate tau
   I_1 <- rnbinom(1, mu=tau, size=phi_inf)
-
+  
   ### use generation time to generate the dynamics of the pandemic
   # calc container initial conditions
   I_t <- rep(-1, N_DAYS)
@@ -349,7 +368,7 @@ simulate_data_country <- function(seed=321){
           assign(NPI,
                  replace(get(NPI),
                          t:(t+active_duration), T)[1:N_DAYS]
-                 )
+          )
           # state_NPI2[t:(t+active_duration)] <- T # original version, only here as alterative to assign each NPI seperately without the outer loop over npis
         }
       }  
@@ -367,7 +386,7 @@ simulate_data_country <- function(seed=321){
     c1_t <- sum(I_t[1:(t-1)] / POPULATION) * (1-p_reinf)
     
     c2_t <- (vaccinations1[t]) * vacc_on_R1 +
-            (vaccinations2[t]) * vacc_on_R2
+      (vaccinations2[t]) * vacc_on_R2
     
     cf_full <- (1 - c1_t - c2_t * (1-c1_t))
     
@@ -391,7 +410,7 @@ simulate_data_country <- function(seed=321){
     # print("test whether the comment version gives exctly the same results!!!, Maybe add a t-1 in the cpp call")
     
     #### generate Ct
-  
+    
     Sumut <- decimals_last_day
     for(u in 1:t){
       Sumut <- Sumut + I_t[u] * Xi_C[t-u+1]
@@ -457,7 +476,7 @@ simulate_data_country <- function(seed=321){
     Sumut <- 0
     for(u in 1:t){
       wd <- data$weekday[u]
-      Sumut <- Sumut + data$C_t[u] * Xi_repC[[wd]][t-u+1]
+      Sumut <- Sumut + data$C_t[u] * Xi_repC_m[[wd]][t-u+1]
     }
     
     rho_tmp <- rhos[rho_periods[t]]
@@ -466,7 +485,7 @@ simulate_data_country <- function(seed=321){
   }
   data[, repC_t := repC_t]
   data[, ErepC_t := ErepC_t]
- 
+  
   #### generate Dt
   # D_t <- rep(-1, N_DAYS)
   # 
@@ -482,7 +501,7 @@ simulate_data_country <- function(seed=321){
   
   data[, D_t := D_t]
   
-    #### generate Ht
+  #### generate Ht
   # H_t <- rep(-1, N_DAYS)
   # 
   # for(t in 1:N_DAYS){
@@ -563,9 +582,9 @@ generate_data <- function(seed=321, write=F, path=paste0(PATH_DATA, "data_simula
   dds <- mapply(function(cc, seed){
     dd <- simulate_data_country(seed)
   } ,
-    cc = paste0("country", LETTERS[1:N_COUNTRY]),
-    seed = seeds,
-    SIMPLIFY = F
+  cc = paste0("country", LETTERS[1:N_COUNTRY]),
+  seed = seeds,
+  SIMPLIFY = F
   ) %>% 
     rbindlist(idcol = "country")
   if (write){
@@ -596,11 +615,11 @@ tt <- Sys.time()
 set.seed(123)
 seeds <- sample(1:9999, N_DATASETS)
 datasets <- parallel::mcmapply(function(ds, seed){
-                              generate_data(seed, write=T, path=paste0(PATH_DATA, "/simulated_data/",ds)) 
-                            }, 
-                            ds=paste0("data_sim_5NPIs_", 1:N_DATASETS, ".csv"),
-                            seed=seeds,
-                            mc.cores = N_CORES, SIMPLIFY = F)
+  generate_data(seed, write=T, path=paste0(PATH_DATA, "/simulated_data/standard/",ds)) 
+}, 
+ds=paste0("data_sim_5NPIs_", 1:N_DATASETS, ".csv"),
+seed=seeds,
+mc.cores = N_CORES, SIMPLIFY = F)
 
 Sys.time()-tt
 
