@@ -388,8 +388,8 @@ def run_chain(chain, path, file_name, rnd_seed):
 
 
 if __name__ == '__main__':
-    seeds = np.random.randint(1, 10000, size=NB_CHAINS)
-    path = f'{PATH}/results/'
+    seeds = np.random.randint(1, 999999, size=NB_CHAINS)
+    path = f'{PATH}/results/main_results/'
     data_file = '/real_data.csv'
 
     t = time.time()
