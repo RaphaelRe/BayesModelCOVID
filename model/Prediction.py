@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import scipy.stats as stats
 import basics
 import copy
@@ -89,16 +90,31 @@ class Prediction:
 
                 if 'improved_treatment' in self.data[country_iter].columns:
                     new_improved_treatment = self.data[country_iter].improved_treatment.iloc[-1]
-                    self.data[country_iter] = self.data[country_iter].append({
-                    'date': new_date,
-                    'weekday':new_weekday,
-                    'improved_treatment': new_improved_treatment
-                    },ignore_index=True)
+                    # self.data[country_iter] = self.data[country_iter].append({
+                    # 'date': new_date,
+                    # 'weekday':new_weekday,
+                    # 'improved_treatment': new_improved_treatment
+                    # },ignore_index=True)
+                    self.data[country_iter] = pd.concat([self.data[country_iter], pd.DataFrame({
+                                                             'date': [new_date],
+                                                             'weekday': [new_weekday],
+                                                             'improved_treatment': new_improved_treatment
+                                                             })],
+                                                        ignore_index=True)
+
                 else:
-                    self.data[country_iter] = self.data[country_iter].append({
-                    'date': new_date,
-                    'weekday':new_weekday,
-                    },ignore_index=True)
+                    # self.data[country_iter] = self.data[country_iter].append({  # this version uses append which is depreciated in futere pandas versions
+                    # 'date': new_date,
+                    # 'weekday':new_weekday,
+                    # },ignore_index=True)
+                    self.data[country_iter] = pd.concat([self.data[country_iter], pd.DataFrame({
+                                                             'date': [new_date],
+                                                             'weekday': [new_weekday],
+                                                             })],
+                                                        ignore_index=True)
+
+
+
 
                 if 'rho_period' in self.data[country_iter].columns:
                     # import pudb; pu.db
