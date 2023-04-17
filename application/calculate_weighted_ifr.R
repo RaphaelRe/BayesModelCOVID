@@ -1,9 +1,9 @@
 ############################################################################
 #### calculates time dependent ifr which gets corrected for vaccinated people
 ############################################################################
-
-library(data.table)
 library(magrittr)
+library(data.table)
+library(ggplot2)
 
 # age specific ifrs from O'Driscol
 ifrs <- c(0.002,0, 0.009, 0.122, 0.992, 7.274)/100
@@ -13,9 +13,9 @@ countries <- c("Austria", "Czechia","Germany", "Italy","France","Spain","Denmark
                "Poland", "Sweden", "Finland", "Ireland",
                "Belgium", "Greece", "Hungary", "Slovenia")
 
-# france
-#https://www.data.gouv.fr/fr/datasets/donnees-relatives-aux-personnes-vaccinees-contre-la-covid-19-1/
-d <- fread("https://www.data.gouv.fr/fr/datasets/r/54dd5f8d-1e2e-4ccb-8fb8-eac68245befd")
+# vaccination data from france
+# d <- fread("https://www.data.gouv.fr/fr/datasets/r/54dd5f8d-1e2e-4ccb-8fb8-eac68245befd")
+d <- fread("../data/data_vaccination/vacsi-a-fra-2023-02-14-19h00.csv")
 
 
 d[, fra:= NULL][, couv_dose1 := NULL][,couv_complet := NULL]
@@ -37,11 +37,7 @@ ggplot(vaccinations_france) +
 
 
 
-
-
-###############################
-# adapt this to other countries
-
+# marginal vaccinations over all strata?
 vaccinations_france[, sum_first_vacc_marginal := sum(sum_first_vacc), by = date]
 vaccinations_france[, sum_second_vacc_marginal := sum(sum_second_vacc), by = date]
 
@@ -50,16 +46,21 @@ ggplot(vaccinations_france) +
   geom_line(aes(date, sum_second_vacc_marginal), col = "darkred")
 
 
+
+###############################
+# adapt this to other countries
+###############################
+
+# calc proportions
 vaccinations_france[, proportion_strat_first := sum_first_vacc/sum_first_vacc_marginal]
 vaccinations_france[, proportion_strat_second := nafill(sum_second_vacc/sum_second_vacc_marginal, fill = 0)]
-
 
 
 #### now use france to calculate vaccinations to other countries
 
 # need nb of vaccinations in each country to each time point
-# from https://ourworldindata.org/covid-vaccinations?country=ESP
-data_vaccs_all_countries <- fread("https://covid.ourworldindata.org/data/owid-covid-data.csv")
+# data_vaccs_all_countries <- fread("https://covid.ourworldindata.org/data/owid-covid-data.csv")
+data_vaccs_all_countries <- fread("../data/data_vaccination/owid-covid-data.csv")
 data_vaccs_all_countries <- data_vaccs_all_countries[location %in% countries & date >= "2020-12-27",
                                  .(date, location, people_vaccinated, people_fully_vaccinated)]
 
@@ -80,7 +81,6 @@ foo <- function(people_vaccinated){
 }
 data_vaccs_all_countries[, people_vaccinated := foo(people_vaccinated), by = location]
 data_vaccs_all_countries[, people_fully_vaccinated := foo(people_fully_vaccinated), by = location]
-
 
 
 data_vaccs_all_countries[, c("people_vaccinated","people_fully_vaccinated") := lapply(.SD, nafill, type = "locf"), .SDcols = c("people_vaccinated", "people_fully_vaccinated")]
@@ -207,10 +207,9 @@ vaccinations_age_specific_new[country == "Germany"] %>%
 
 
 
+##
+## add info about variant of concern to inflate ifr 
 
-###################
-#### Firstly, add info about variant of concern to inflate ifr 
-###################
 
 vocs <- fread("../data/variants_of_concern.csv")
 vocs[country == "UnitedKingdom", country := "United Kingdom"]
@@ -249,6 +248,30 @@ vaccinations_age_specific_new[, ifr_age_voc_adjusted := ifr_age*proportion_origi
                      ifr_age*proportion_delta*2.08
     ]
 
+# blocks with two lines indicate additional code for alternative IFRs used in the sensitivity analysis
+# further IFRs for sensitivity analysis
+# ______________________________________________________________________________
+# ______________________________________________________________________________
+vaccinations_age_specific_new_voc_low <- data.table::copy(vaccinations_age_specific_new)
+vaccinations_age_specific_new_voc_high <- data.table::copy(vaccinations_age_specific_new)
+
+vaccinations_age_specific_new_voc_low[, ifr_age_voc_adjusted := ifr_age*proportion_original +
+                                ifr_age*proportion_alpha*(1 + 0.51*0.75)  +
+                                ifr_age*proportion_delta*(1 + 1.08*1.25)
+]
+vaccinations_age_specific_new_voc_high[, ifr_age_voc_adjusted := ifr_age*proportion_original +
+                                ifr_age*proportion_alpha*(1 + 0.51*1.25)  +
+                                ifr_age*proportion_delta*(1 + 1.08*1.25)
+]
+
+# vaccinations_age_specific_new_voc_high[country == "Germany"] %>% ggplot(aes(date))+
+#   geom_line(aes(y=ifr_age),color="black")+
+#   geom_line(aes(y=ifr_age_voc_adjusted),color="blue")+
+#   facet_wrap(~age_group_new, scales = "free")
+
+# ______________________________________________________________________________
+# ______________________________________________________________________________
+
 
 
 vaccinations_age_specific_new[country == "Germany"] %>% ggplot(aes(date))+
@@ -258,10 +281,8 @@ vaccinations_age_specific_new[country == "Germany"] %>% ggplot(aes(date))+
 
 
 
-
-
-#### get info about age distribution in each country
-### source for population stems from oDriscoll
+## get info about age distribution in each country
+## source for population stems from oDriscoll
 
 # function to define age groups
 aggregate_groups <- function(d){
@@ -321,24 +342,61 @@ vaccinations_age_specific_new %>% ggplot() + geom_line(aes(date, sum_first_vacc,
   facet_wrap("country", scales = "free")
 
 
+# ______________________________________________________________________________
+# ______________________________________________________________________________
+vaccinations_age_specific_new_voc_low <- merge(vaccinations_age_specific_new_voc_low, populations, all.x = T, by = c("country", "age_group_new"))
+vaccinations_age_specific_new_voc_low[sum_first_vacc > population_age_strata, sum_first_vacc := population_age_strata]
+
+vaccinations_age_specific_new_voc_high <- merge(vaccinations_age_specific_new_voc_high, populations, all.x = T, by = c("country", "age_group_new"))
+vaccinations_age_specific_new_voc_high[sum_first_vacc > population_age_strata, sum_first_vacc := population_age_strata]
+# ______________________________________________________________________________
+# ______________________________________________________________________________
+
+
+
+
+
 #  calculate ifr, assume 80% safety against dying
-# this line is the old code
+# this line is without voc adjustment
 vaccinations_age_specific_new[, ifr_t_m := ((population_age_strata-sum_first_vacc*0.8)*ifr_age)/population]
-# this line is new
+# with voc adjustment
 vaccinations_age_specific_new[, ifr_t_m_voc_adjusted := ((population_age_strata-sum_first_vacc*0.8)*ifr_age_voc_adjusted)/population]
 
 
+
+# ______________________________________________________________________________
+# ______________________________________________________________________________
+vaccinations_age_specific_new_voc_low[, ifr_t_m_voc_adjusted := ((population_age_strata-sum_first_vacc*0.8)*ifr_age_voc_adjusted)/population]
+vaccinations_age_specific_new_voc_high[, ifr_t_m_voc_adjusted := ((population_age_strata-sum_first_vacc*0.8)*ifr_age_voc_adjusted)/population]
+
+vaccinations_age_specific_new_vacc_low <- data.table::copy(vaccinations_age_specific_new)
+vaccinations_age_specific_new_vacc_high <- data.table::copy(vaccinations_age_specific_new)
+vaccinations_age_specific_new_vacc_low[, ifr_t_m_voc_adjusted := ((population_age_strata-sum_first_vacc*(1-0.2*0.75))*ifr_age_voc_adjusted)/population]
+vaccinations_age_specific_new_vacc_high[, ifr_t_m_voc_adjusted := ((population_age_strata-sum_first_vacc*(1-0.2*1.25))*ifr_age_voc_adjusted)/population]
+# ______________________________________________________________________________
+# ______________________________________________________________________________
+
+
 ggplot(vaccinations_age_specific_new)+
-  geom_line(aes(date, ifr_age_voc_adjusted, color = age_group_new))+
-  geom_line(aes(date, ifr_age, color = age_group_new))+
+  geom_line(aes(date, ifr_age_voc_adjusted, color = age_group_new)) + # adjusted
+  geom_line(aes(date, ifr_age, color = age_group_new))+ # without adjustment
   facet_wrap(~country)
 
-
-vaccinations_age_specific_new[country == "Spain" & age_group_new == "0-34", ifr_t_m]
+# vaccinations_age_specific_new[country == "Spain" & age_group_new == "0-34", ifr_t_m]
 
 # sum ifrtm together to get the true ifrtm
 ifr_t_m_all_countries <- vaccinations_age_specific_new[, .(ifr_t_m = sum(ifr_t_m)), by = c("country", "date")]
 ifr_t_m_all_countries_new <- vaccinations_age_specific_new[, .(ifr_t_m_voc_adjusted = sum(ifr_t_m_voc_adjusted)), by = c("country", "date")]
+
+# ______________________________________________________________________________
+# ______________________________________________________________________________
+ifr_t_m_all_countries_new_voc_low <- vaccinations_age_specific_new_voc_low[, .(ifr_t_m_voc_adjusted = sum(ifr_t_m_voc_adjusted)), by = c("country", "date")]
+ifr_t_m_all_countries_new_voc_high <- vaccinations_age_specific_new_voc_high[, .(ifr_t_m_voc_adjusted = sum(ifr_t_m_voc_adjusted)), by = c("country", "date")]
+
+ifr_t_m_all_countries_new_vacc_low <- vaccinations_age_specific_new_vacc_low[, .(ifr_t_m_voc_adjusted = sum(ifr_t_m_voc_adjusted)), by = c("country", "date")]
+ifr_t_m_all_countries_new_vacc_high <- vaccinations_age_specific_new_vacc_high[, .(ifr_t_m_voc_adjusted = sum(ifr_t_m_voc_adjusted)), by = c("country", "date")]
+# ______________________________________________________________________________
+# ______________________________________________________________________________
 
 
 
@@ -346,12 +404,10 @@ g1 <- ggplot(ifr_t_m_all_countries) + geom_line(aes(date,ifr_t_m,color = country
 g2 <- ggplot(ifr_t_m_all_countries_new) + geom_line(aes(date,ifr_t_m_voc_adjusted,color = country))  
 g3 <- ggplot(merge(ifr_t_m_all_countries_new, ifr_t_m_all_countries)) + geom_line(aes(date,ifr_t_m_voc_adjusted-ifr_t_m,color = country))  
 egg::ggarrange(g1,g2,g3,ncol = 1)
-
 # plotly::ggplotly(g2)
 
 
-
-# expand this back to january 
+# expand this back to start of pandemic 
 ifr_t_m_all_countries
 ifr_t_m_all_countries_new
 ifr_t_m_all_countries_long <- lapply(unique(ifr_t_m_all_countries$country), function(cc){
@@ -369,6 +425,35 @@ ifr_t_m_all_countries_long_new <- lapply(unique(ifr_t_m_all_countries_new$countr
 }) %>% rbindlist()
 
 
+# ______________________________________________________________________________
+# ______________________________________________________________________________
+ifr_t_m_all_countries_long_new_voc_low <- lapply(unique(ifr_t_m_all_countries_new_voc_low$country), function(cc){
+  tmp <- data.table(country = cc, date = seq.Date(as.Date("2020-01-01"), ifr_t_m_all_countries_new_voc_low$date %>% max, by = "day"))
+  tmp <- merge(tmp, ifr_t_m_all_countries_new_voc_low[country == cc], all.x = T)
+  tmp[, ifr_t_m_voc_adjusted := nafill(ifr_t_m_voc_adjusted, type = "nocb")]
+}) %>% rbindlist()
+
+ifr_t_m_all_countries_long_new_voc_high <- lapply(unique(ifr_t_m_all_countries_new_voc_high$country), function(cc){
+  tmp <- data.table(country = cc, date = seq.Date(as.Date("2020-01-01"), ifr_t_m_all_countries_new_voc_high$date %>% max, by = "day"))
+  tmp <- merge(tmp, ifr_t_m_all_countries_new_voc_high[country == cc], all.x = T)
+  tmp[, ifr_t_m_voc_adjusted := nafill(ifr_t_m_voc_adjusted, type = "nocb")]
+}) %>% rbindlist()
+
+ifr_t_m_all_countries_long_new_vacc_low <- lapply(unique(ifr_t_m_all_countries_new_vacc_low$country), function(cc){
+  tmp <- data.table(country = cc, date = seq.Date(as.Date("2020-01-01"), ifr_t_m_all_countries_new_vacc_low$date %>% max, by = "day"))
+  tmp <- merge(tmp, ifr_t_m_all_countries_new_vacc_low[country == cc], all.x = T)
+  tmp[, ifr_t_m_voc_adjusted := nafill(ifr_t_m_voc_adjusted, type = "nocb")]
+}) %>% rbindlist()
+
+ifr_t_m_all_countries_long_new_vacc_high <- lapply(unique(ifr_t_m_all_countries_new_vacc_high$country), function(cc){
+  tmp <- data.table(country = cc, date = seq.Date(as.Date("2020-01-01"), ifr_t_m_all_countries_new_vacc_high$date %>% max, by = "day"))
+  tmp <- merge(tmp, ifr_t_m_all_countries_new_vacc_high[country == cc], all.x = T)
+  tmp[, ifr_t_m_voc_adjusted := nafill(ifr_t_m_voc_adjusted, type = "nocb")]
+}) %>% rbindlist()
+
+# ______________________________________________________________________________
+# ______________________________________________________________________________
+
 
 
 # delay ifr with 14 days
@@ -378,18 +463,31 @@ ifr_t_m_all_countries_long_new[, ifr_t_m := nafill(shift(ifr_t_m_voc_adjusted, 1
 ggplot(ifr_t_m_all_countries_long) + geom_line(aes(date, ifr_t_m, color = country))
 ggplot(ifr_t_m_all_countries_long_new) + geom_line(aes(date, ifr_t_m, color = country))
 
+# ______________________________________________________________________________
+# ______________________________________________________________________________
+ifr_t_m_all_countries_long_new_voc_low[, ifr_t_m := nafill(shift(ifr_t_m_voc_adjusted, 14), "nocb"), by = country]
+ifr_t_m_all_countries_long_new_voc_high[, ifr_t_m := nafill(shift(ifr_t_m_voc_adjusted, 14), "nocb"), by = country]
+ifr_t_m_all_countries_long_new_vacc_low[, ifr_t_m := nafill(shift(ifr_t_m_voc_adjusted, 14), "nocb"), by = country]
+ifr_t_m_all_countries_long_new_vacc_high[, ifr_t_m := nafill(shift(ifr_t_m_voc_adjusted, 14), "nocb"), by = country]
+g1 <- ggplot(ifr_t_m_all_countries_long_new_voc_low) + geom_line(aes(date, ifr_t_m, color = country)) + ylim(0, 0.013) + ggtitle("voc_low")
+g2 <- ggplot(ifr_t_m_all_countries_long_new_voc_high) + geom_line(aes(date, ifr_t_m, color = country)) + ylim(0, 0.013) + ggtitle("voc_high")
+g3 <- ggplot(ifr_t_m_all_countries_long_new_vacc_low) + geom_line(aes(date, ifr_t_m, color = country)) + ylim(0, 0.013) + ggtitle("vacc_low")
+g4 <- ggplot(ifr_t_m_all_countries_long_new_vacc_high) + geom_line(aes(date, ifr_t_m, color = country)) + ylim(0, 0.013) + ggtitle("vacc_high")
+
+egg::ggarrange(g1,g2,g3,g4)
+# ______________________________________________________________________________
+# ______________________________________________________________________________
+
+
+fwrite(ifr_t_m_all_countries_long_new_voc_low, "../data/ifr/ifr_t_m_shifted_voc_low.csv")
+fwrite(ifr_t_m_all_countries_long_new_voc_high, "../data/ifr/ifr_t_m_shifted_voc_high.csv")
+fwrite(ifr_t_m_all_countries_long_new_vacc_low, "../data/ifr/ifr_t_m_shifted_vacc_low.csv")
+fwrite(ifr_t_m_all_countries_long_new_vacc_high, "../data/ifr/ifr_t_m_shifted_vacc_high.csv")
+
 
 
 ####### 
 # write data
 #fwrite(ifr_t_m_all_countries_long, "../data/ifr_t_m.csv")
-path <- "../data/ifr_t_m_shifted.csv"
-
-fwrite(ifr_t_m_all_countries_long_new, path)
-
-
-  
-
-
-
+fwrite(ifr_t_m_all_countries_long_new, "../data/ifr/ifr_t_m_shifted.csv")
 
