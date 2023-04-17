@@ -19,7 +19,7 @@ library(ggplot2)
 set.seed(123)
 
 # number of generated datasets
-N_DATASETS <- 100
+N_DATASETS <- 5
 
 ### other parameters
 N_COUNTRY <- 10
@@ -459,7 +459,8 @@ simulate_data_country <- function(seed=321){
   #### generate repCt
   
   # we need the weekdays since the model must know which column to pick from Xi_repC
-  data[, weekday := lubridate::wday(date, week_start = T)]
+#   data[, weekday := lubridate::wday(date, week_start = T)]
+  data[, weekday := lubridate::wday(date, week_start = 1)]
   # also need identifier for rho period
   if (N_DAYS %% 10 != 0) {
     stop("N_DAYS should be a multiple of 10")

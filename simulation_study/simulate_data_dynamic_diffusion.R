@@ -553,7 +553,7 @@ simulate_data_country <- function(seed=321, diffusion=F){
   #### generate repCt
   
   # we need the weekdays since the model must know which column to pick from Xi_repC
-  data[, weekday := lubridate::wday(date, week_start = T)]
+  data[, weekday := lubridate::wday(date, week_start = 1)]
   # also need identifier for rho period
   if (N_DAYS %% 10 != 0) {
     stop("N_DAYS should be a multiple of 10")
