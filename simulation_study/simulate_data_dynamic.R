@@ -36,16 +36,6 @@ Xi_H <- fread(paste0(PATH_DATA, "XiH_all.csv"))[[1]] #  %>% append(rep(0,200))
 Xi_Hicu <- fread(paste0(PATH_DATA, "XiH_all.csv"))[[3]]#  %>% append(rep(0,200))
 
 
-## adapt reporting patterns for a part of the countries (assume that these countries use a reporting patter where they do not report anything on this specific day)
-# reported cases
-Xi_repC_2 <- lapply(1:7, function(day){
-  xi_tmp <- Xi_repC[[day]]
-  xi_tmp[seq(8-day, length(xi_tmp), by = 7)] <- 0
-  xi_tmp <- xi_tmp/sum(xi_tmp)
-}) %>% as.data.table %>% 
-  set_names(names(Xi_repC))
-
-
 ### define parameters for tau, each country has its own tau deviating from the overall
 mean_tau <- 10
 sd_tau <- 2
@@ -278,15 +268,6 @@ simulate_data_country <- function(seed=321){
   # This function simulates the data for ONE country using the objects from above
   set.seed(seed)
   
-  # sample the used reporting scheme for the country
-  reporting_scheme <- sample(c(T,F), 1)
-  
-  if (reporting_scheme) {
-    Xi_repC_m <- Xi_repC
-  } else {
-    Xi_repC_m <- Xi_repC_2
-  }
-  
   ### sample NPI effects
   NPIs <- generate_NPIs()
   
@@ -477,7 +458,7 @@ simulate_data_country <- function(seed=321){
     Sumut <- 0
     for(u in 1:t){
       wd <- data$weekday[u]
-      Sumut <- Sumut + data$C_t[u] * Xi_repC_m[[wd]][t-u+1]
+      Sumut <- Sumut + data$C_t[u] * Xi_repC[[wd]][t-u+1]
     }
     
     rho_tmp <- rhos[rho_periods[t]]
