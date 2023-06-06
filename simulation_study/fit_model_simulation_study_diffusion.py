@@ -5,6 +5,7 @@ from toolz.dicttoolz import valmap
 import time
 import scipy.stats as stats
 from string import ascii_uppercase
+import multiprocessing
 
 import sys
 sys.path.append('../model')
@@ -13,8 +14,8 @@ from basics import load_data, load_time_distribution, load_reporting_delay_distr
 
 
 PATH = os.getcwd()
-NB_DATASETS = 10
-CORES = 10
+NB_DATASETS_BATCH = 50  # the number of datasets in one batch, code uses two batches
+CORES = 50
 
 np.random.seed(seed=123)
 
@@ -92,10 +93,11 @@ def define_proposal_sds():
     return proposal_sds
 
 
-def define_start_values(file_name='data_sim_5NPIs_1.csv'):
+def define_start_values(file_name, rnd_seed):
     """
     Function defines start values
     """
+    np.random.seed(seed=rnd_seed)
 
     # load data, will be used afterwards to init start values (e.g. country iter)
     data_path = f'{PATH}/../data/'
@@ -213,10 +215,12 @@ def define_start_values(file_name='data_sim_5NPIs_1.csv'):
     return start_vals
 
 
-def run_chains(path, file_name='data_sim_5NPIs_1.csv', nb_chains=1):
+def run_chain(path, file_name, chain, seed):
     """
     Functions serves to run chains for one given dataset
     """
+    np.random.seed(seed)
+
     # load data
     data = load_data(f'{PATH}/../data/simulated_data/{file_name}')
     # not required, no seasons
@@ -244,11 +248,13 @@ def run_chains(path, file_name='data_sim_5NPIs_1.csv', nb_chains=1):
 
     prior_parameters = define_prior_values()
     proposal_sds = define_proposal_sds()
-    start_values = {f'chain{i}': define_start_values(file_name) for i in range(1, nb_chains + 1)}
+
+    seed_generation_start_vals = np.random.randint(1, 99999, 1)
+    start_values = {chain: define_start_values(file_name, seed_generation_start_vals)}
 
     # check if pi_d and the data have the correct shape
-    len_piD = start_values['chain1']['pi_D'][next(iter(start_values['chain1']['pi_D']))].shape[0]
-    len_data = data[data.country == next(iter(start_values['chain1']['pi_D']))].shape[0]
+    len_piD = start_values[chain]['pi_D'][next(iter(start_values[chain]['pi_D']))].shape[0]
+    len_data = data[data.country == next(iter(start_values[chain]['pi_D']))].shape[0]
 
     if len_piD != len_data:
         raise ValueError('Length of pi_D must be the same as the data for a country')
@@ -287,43 +293,67 @@ def run_chains(path, file_name='data_sim_5NPIs_1.csv', nb_chains=1):
             if np.all(data[data.country == cc][inter] == 0):
                 exceptions_intervention.append('alpha_' + inter + '_' + cc)
 
-    # run chains
-    for i in range(1, nb_chains + 1):
-        algo = MCMC(data=data,
-                    model_specification=model_specification,
-                    informative_priors=True,
-                    path_results=path_results,
-                    proposal_sd=proposal_sds,
-                    prior_parameters=prior_parameters,
-                    start_values=start_values,
-                    chain=f'chain{i}',
-                    nb_future_values=1,
-                    fix_latent_variable=False,
-                    fixed_parameters=fixed_params,
-                    exceptions_intervention=exceptions_intervention,
-                    oos_country=None
-                    # oos_country=oos_country
-                    )
+    # run chain
+    algo = MCMC(data=data,
+                model_specification=model_specification,
+                informative_priors=True,
+                path_results=path_results,
+                proposal_sd=proposal_sds,
+                prior_parameters=prior_parameters,
+                start_values=start_values,
+                chain=chain,
+                nb_future_values=1,
+                fix_latent_variable=False,
+                fixed_parameters=fixed_params,
+                exceptions_intervention=exceptions_intervention,
+                oos_country=None
+                # oos_country=oos_country
+                )
 
-        algo.run_adaptive_algorithm(iterations=50001, burnin=20000,
-                                    adaptive_phases=10, thin=100,
-                                    prediction_interval=300)
+    # algo.run_adaptive_algorithm(iterations=50001, burnin=20000,
+                                # adaptive_phases=10, thin=100,
+                                # prediction_interval=300)
 
-        # very short period to test, whether algo is sampling everything
-        # algo.run_adaptive_algorithm(iterations=11, burnin=1,
-                                    # adaptive_phases=0, thin=1,
-                                    # prediction_interval=3)
+    # very short period to test, whether algo is sampling everything
+    algo.run_adaptive_algorithm(iterations=4, burnin=1,
+                                adaptive_phases=0, thin=1,
+                                prediction_interval=3)
 
 
 if __name__ == '__main__':
-    import multiprocessing
-    t = time.time()
 
-    # for debugging
-    # import pudb; pu.db
-    # run_chains('results')
+    # run code in 2 batches. Makes it easier to split the calculation if necessary, just comment one part out
+    # in the current settings, I use 2 chains for each dataset. 
+    
+    # Running first batch with given seed
+    np.random.seed(123)
 
+    result_paths = [f'results/diffusion/res_dataset_{i}' for i in range(1, NB_DATASETS_BATCH+1)] * 2
+    datasets = [f'/diffusion/data_sim_5NPIs_{i}_diffusion.csv' for i in range(1, NB_DATASETS_BATCH+1)] * 2
+    chains = ['chain1']*NB_DATASETS_BATCH + ['chain2']*NB_DATASETS_BATCH
+    seeds = np.random.randint(1, 999999, size=len(chains)).tolist()
+
+    args_list = list(zip(result_paths, datasets, chains, seeds))
     np.seterr('ignore')
+
+    t = time.time()
     with multiprocessing.Pool(CORES) as pool:
-        res = pool.starmap(run_chains, [(f'results/res_dataset_{i}', f'data_sim_5NPIs_{i}.csv', 2) for i in range(1, NB_DATASETS + 1)])
-    print("Full calculation time: " + str(time.time() - t))
+        res = pool.starmap(run_chain, args_list)
+    print("Full calculation time first 50 datasets: " + str(time.time() - t))
+
+
+    # second batch
+    np.random.seed(321)
+
+    result_paths = [f'results/diffusion/res_dataset_{i}' for i in range(NB_DATASETS_BATCH+1, NB_DATASETS_BATCH*2+1)] * 2
+    datasets = [f'/diffusion/data_sim_5NPIs_{i}_diffusion.csv' for i in range(NB_DATASETS_BATCH+1, NB_DATASETS_BATCH*2+1)] * 2
+    chains = ['chain1']*NB_DATASETS_BATCH + ['chain2']*NB_DATASETS_BATCH
+    seeds = np.random.randint(1, 999999, size=len(chains)).tolist()
+
+    args_list = list(zip(result_paths, datasets, chains, seeds))
+    np.seterr('ignore')
+
+    t2 = time.time()
+    with multiprocessing.Pool(CORES) as pool:
+        res = pool.starmap(run_chain, args_list)
+    print("Full calculation time second batch: " + str(time.time() - t2))

@@ -421,20 +421,11 @@ def run_configuration(config: str, chain: str, path: str, file_name: str, rnd_se
     # set good proposals (optional)
     algo.set_proposal_sds("../data/proposal_sds_real_data.json")
 
-    # algo.run_adaptive_algorithm(iterations=50000,
-                                # burnin=20000,
-                                # adaptive_phases=10,
-                                # thin=100,
-                                # prediction_interval=300)
-
-    # short version. Can be used check whether the model is working and writes
-    # results
-    algo.run_adaptive_algorithm(iterations=4,
-                                burnin=1,
-                                adaptive_phases=0,
-                                thin=1,
-                                prediction_interval=3)
-
+    algo.run_adaptive_algorithm(iterations=50000,
+                                burnin=20000,
+                                adaptive_phases=10,
+                                thin=100,
+                                prediction_interval=300)
 
 if __name__ == '__main__':
     path = f'{PATH}/results/sensitivity_analysis/'
