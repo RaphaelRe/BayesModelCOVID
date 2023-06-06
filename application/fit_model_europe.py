@@ -378,13 +378,6 @@ def run_chain(chain, path, file_name, rnd_seed):
                                 thin=100,
                                 prediction_interval=300)
 
-    # short version. Can be used check whether the model is working and writes
-    # results
-    # algo.run_adaptive_algorithm(iterations=11,
-                                # burnin=1,
-                                # adaptive_phases=0,
-                                # thin=1,
-                                # prediction_interval=3)
 
 
 if __name__ == '__main__':
