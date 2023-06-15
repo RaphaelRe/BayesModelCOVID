@@ -7,7 +7,7 @@ import basics
 import update
 
 
-class LatentVariables:  # Achtung ist eine Klasse mit allen (ricthigen) Latenten Variablen
+class LatentVariables:
     '''
     The Latent variable class holds the true number of infections.
     It also holds the derived quantities.
@@ -161,22 +161,15 @@ class LatentVariables:  # Achtung ist eine Klasse mit allen (ricthigen) Latenten
                     parameter_values, start=start)
 
             candidate_values['Rt'] = current_values['Rt']
-        ###############################################################
-        ####### neu hinzugefügt! von sabine checken lassen
             candidate_values['correction_factor1'] = current_values['correction_factor1']
             candidate_values['correction_factor2'] = current_values['correction_factor2']
-        ####### neu hinzugefügt! von sabine checken lassen
-        ########################################################
+
             if not isinstance(candidate_values['correction_factor1'][country], int):
                 candidate_values['correction_factor1'][country] = basics.calculate_correction_factor1_country(candidate_values[country], parameter_values['N_'+country], parameter_values['probability_reinfection'])
 
-        ###############################################################
-        ####### neu hinzugefügt! von sabine checken lassen
             if ('Xi_R' in current_values.keys()): # necessary sinc we need Xi_R in the likelihood
                 candidate_values['Xi_R'] = current_values['Xi_R']
                 candidate_values['Xi_D'] = current_values['Xi_D']
-        ###############################################################
-        ####### neu hinzugefügt! von sabine checken lassen
 
             if self.model == 'infections':
                 candidate_values['cases_view'] =\
@@ -342,38 +335,9 @@ class LatentVariables:  # Achtung ist eine Klasse mit allen (ricthigen) Latenten
                 d.fillna(method='ffill', inplace=True)
                 d_smooth = np.convolve(d, np.ones(7)/7, mode='same')
                 dd = np.concatenate((dd, d_smooth)).round() + 1
-                # dd[-1] = dd[-1] * 80
             values = dd
 
 
-
-            # import matplotlib.pyplot as plt
-            # plt.plot(values)
-            # plt.plot(data.reported_cases)
-            # plt.show()
-
-            # simple alternative
-            # values = (data.reported_cases+1) * 5
-            # # import pudb;pu.db
-            # def smooth(y, box_pts):
-                # box = np.ones(box_pts)/box_pts
-                # y_smooth = np.convolve(y, box, mode='same')
-                # return y_smooth
-
-            # countries = data.country.unique()
-            # x = np.array([])
-            # for cc in countries:
-                # dd = data[data.country == cc].reported_cases.to_numpy()
-                # values = (dd + 1) * 5
-                # values = smooth(values, 7)
-                # values = np.ceil(values)
-                # x = np.append(x,values)
-
-            # values = x
-            # values = smooth(values, 7)
-
-
-            # values = data['infections'].to_numpy()
         if not fix_latent_variable:
             values = stats.poisson.rvs(values) + 1
         elif fix_latent_variable:

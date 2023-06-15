@@ -15,24 +15,12 @@ class Prediction:
     def __init__(self, model, data, nb_futue_values,
                  sample_size=1000, parameter_values=None, oos_data=None):
         self.model = model
-        # falls wetterdaten mit einbezogen werden ist die einfachste lösung
-        # wahrscheinlich schon verlängerte daten einzulesen und dann mit einer
-        # data view in MCMC bei der parameterschätzung auf die daten bis zum
-        # aktuellen datum zu nutzen.
-        # in der zwischenzeit hängen wir hier einfach die zukünftigen werte an
         self.data = basics.dictionarize_data(data)
         if oos_data is not None:
             # oos country is assumed to be only ONE country
             self.oos_data = oos_data
             self.oos_country = oos_data.country.unique()[0]
             self.nb_days_oos_init = self.data[self.oos_country].shape[0]
-
-            # self.oos_cases = np.zeros((self.oos_data.shape[0], sample_size), dtype = int)
-            # self.oos_infections = np.zeros_like(self.oos_cases)
-            # self.oos_deaths = np.zeros_like(self.oos_cases)
-            # self.oos_hospitalizations = np.zeros_like(self.oos_cases)
-            # self.oos_Rt= np.zeros_like(self.oos_cases)
-
             # calculate cf2 only at start
             self.oos_cf2 = basics.calculate_correction_factor2_country(
                     self.oos_data, parameter_values,
@@ -175,45 +163,12 @@ class Prediction:
                     # cf2 = basics.calculate_correction_factor2_country(self.data[country_iter][:(self.future_indices[country_iter][0])], parameter_values, country_iter).iloc[-1]
                     cf2 = basics.calculate_correction_factor2_country(self.data[country_iter][:(self.future_indices[country_iter][0])], parameter_values, country_iter)[-1]
                     for t in self.future_indices[country_iter]:
-                        # print(basics.calculate_correction_factor1_country(infections[:t], parameter_values, country_iter))
-                        # print(basics.calculate_correction_factor1_country(infections[:t], parameter_values, country_iter).shape)
-                        # print(t)
-                        # inf_tmp = np.concatenate((infections[:t], [-999999])) # 99999 als harakiri - letzter wert sollte eigentlich in der Berechnung des cf weggeschmissen werden
                         cf1 = basics.calculate_correction_factor1_country(infections[:t+1], parameter_values['N_'+country_iter], parameter_values['probability_reinfection'])[t] # here t+1 in infection sis fine because the last value gets thrown away
                         future_value = self.generate_future_value(infections, parameter_values, t, Rt, cf1, cf2)
                         infections[t] = future_value
 
                     # predict all cases including future cases (yes this is redundant...)
                     self.cases[country_iter][:,self.i] = basics.calculate_cases(infections, parameter_values)
-
-
-
-            # if self.model == 'cases':
-
-                # cases = self.cases[country_iter][:,self.i] # Attention! This should be a pointer
-
-                # cases[:(self.future_indices[country_iter][0])] = latent_variables[country_iter]
-                # #cases[:(self.future_indices[country_iter][0]-1)] = latent_variables[country_iter]
-                
-
-                # #### Achtung! Wenn die latente variable umstrukturiert wird, muss
-                # # das geändert werden in latent_variables[cases_view][country_iter]!!!
-
-                # # hier müsste calculate Rt benutz werden, um es zu adaptieren
-                # Rt = latent_variables['Rt'][country_iter][-1]
-                # for intervention in intervention_change.keys():
-
-                    # # multiplication with -1 to invert the sign, since the formula
-                    # # for Rt is exp(-alpha)
-                    # Rt *= exp(intervention_change[intervention] * (-1) * parameter_values['alpha']['alpha_' + intervention])
-
-                # for t in self.future_indices[country_iter]:
-                    # future_value = self.generate_future_value(cases, parameter_values,
-                            # t, Rt)
-                    # cases[t] = future_value
-
-
-
 
 
     def make_oos_cases(self, parameter_values, current_prior_values, latent_variables):
@@ -239,8 +194,6 @@ class Prediction:
         # given Rt cf2 one must calculate iteratively the infections since cf1 depends on the past
         
 
-        # raise ValueError("implemented, not tested!!!!")
-
         prob_reinfection = parameter_values['probability_reinfection']
 
         infections = np.zeros((self.oos_data.shape[0]), dtype = int)
@@ -264,7 +217,7 @@ class Prediction:
     def generate_future_value(self,cases, parameter_values, t, Rt, cf1=0, cf2=0):
         gamma = parameter_values['gamma']
         sumut = 0
-        ##### jit this for loop
+        ##### jit this for loop?
         for u in range(t):
             sumut += cases[u] * gamma[t-u-1]
 
@@ -446,53 +399,3 @@ class Prediction:
 
             self.i += n_predicitons_made - 1  # -1 here correct???
             print("Other attributes to set?????")
-
-
-
-    ##### funtion for prediction without initial period to fit the beginning of the pandemic
-
-    # def make_oos_predictions(self, parameter_values, current_prior_values, latent_variables):
-        # print("Caveat: In the current varsion oos prediction only works for 1 country")
-        # R0_prediction = stats.norm.rvs(current_prior_values['R0']['mean'], current_prior_values['R0']['sd']) 
-        
-        # alpha_predictions = {alpha_key: stats.norm.rvs(current_prior_values['alpha'][alpha_key]['mean'], current_prior_values['alpha'][alpha_key]['sd']) for alpha_key in current_prior_values['alpha'].keys()}
-        # random_country = random.choice(list(latent_variables['Xi_D'].keys()))
-        # Xi_D_predictions = latent_variables['Xi_D'][random_country]['values'][:,0]# xi_D is Tx7 (because of the weekday-specific reporting delay in xi_R), but each columns is the same
-        # # Xi_D_predictions = parameter_values['xi_D'][:,0] 
-        # pi_H_predictions = parameter_values['piH']['piH_' + random_country]
-
-        # # alternative copy deepcopy
-        # parameter_values_oos = {
-                # 'tau': parameter_values['tau'],
-                # 'gamma': parameter_values['gamma'],
-                # 'phi_infections':parameter_values['phi_infections'],
-                # # 'beta_voc': parameter_values['beta_voc'],
-                # 'beta_alpha': parameter_values['beta_alpha'],
-                # 'beta_delta': parameter_values['beta_delta'],
-                # 'R0':{'R0_' + self.oos_country: R0_prediction},
-                # 'alpha': {alpha_key: {alpha_key + '_' + self.oos_country: alpha_predictions[alpha_key]} for alpha_key in alpha_predictions.keys()}
-                # 'N': parameter_values['N' + self.oos_country] # this is actually N + self.oos_country, currently single country and therefore N is sufficient
-                # }
-
-        # # caluclate Rt
-        # Rt = basics.calculate_Rt_country(parameter_values=parameter_values_oos, 
-                                         # data=self.oos_data[self.oos_country], country=self.oos_country)
-        # self.Rt[country_iter][:,self.i] = Rt
-        # # given Rt cf2 one must calculate iteratively the infections since cf1 depends on the past
-        
-
-        
-        # raise ValueError("not implemented yet!")
-
-        # prob_reinfection = parameter_values['probability_reinfection']
-        # self.oos_deaths = copy.deepcopy(self.oos_cases)
-
-        # infections = np.zeros((self.oos_data[self.oos_country].shape[0]), dtype = int)
-        # infections[0] = parameter_values['tau']
-        # cf1_oos_t = 0
-
-        # for t in range(1,len(infections)+1):
-            # infections[t] = self.generate_future_value(infections, parameter_values, t, Rt[t-1], cf1 = cf1_oos_t, cf2 = self.oos_cf2[t-1])
-            # cf1_oos_t = (np.sum(I[:t])/parameter_values_oos['N'])*(1 - probability_reinfection)
-
-

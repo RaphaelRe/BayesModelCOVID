@@ -4,15 +4,6 @@ import scipy.stats as stats
 import basics
 import copy
 import math # only required to test for nan-value
-#import warnings
-#import pdb
-#import sys
-#import traceback
-import matplotlib.pyplot as plt
-
-#np.seterr(all='warn')
-#warnings.filterwarnings('error')
-
 
 
 def parameter_update(parameter, current_values, latent_variable, parent_name):
@@ -49,8 +40,8 @@ def parameter_update(parameter, current_values, latent_variable, parent_name):
 
 
     if parent_name in ['beta_sat', 'beta_sun', 'beta_mon', 'beta_tue', 'beta_wed', 'beta_fri', 'betaD_sat', 'betaD_sun', 'betaD_mon', 'betaD_tue', 'betaD_wed', 'betaD_fri']:
-        country = splitted_name[-1]  # # # check this! sould return country
-        weekday = splitted_name[-2]  # # # check this!should return the weekday
+        country = splitted_name[-1]
+        weekday = splitted_name[-2]
         if splitted_name[0] == 'beta':
             latent_variable_cand['Xi_R'] = {}
             candidate_Xi = basics.create_candidate_Xi_R(latent_variable_curr['Xi_R'][country])
@@ -141,18 +132,6 @@ def ratio_likelihood_normal(values, current_prior_values, candidate_prior_values
                   1 / (2 * sd_cand**2) * np.sum((values - mu_cand)**2))
                   )
 
-# test
-# for _ in range(1000):
-    # x = np.random.random(1)
-    # current_prior_values = {'mean':np.random.random(1), 'sd':np.random.random(1)}
-    # candidate_prior_values = {'mean':np.random.random(1), 'sd':np.random.random(1)}
-    # print("__________________")
-    # print(ratio_likelihood_normal(x, current_prior_values, candidate_prior_values)-
-            # ratio_likelihood_normal2(x, current_prior_values, candidate_prior_values)
-            # )
-
-
-
 
 def prior_ratio_exponential(theta_t, theta_cand, prior_parameters_theta, informative_priors):
     ratio = stats.expon.pdf(theta_cand,loc=0,scale=1/prior_parameters_theta['lambda'])/stats.expon.pdf(
@@ -193,27 +172,6 @@ def prior_ratio_uniform(theta_t, theta_cand, prior_parameters_theta, informative
     # otherwise it is 0. Theta_t does not affect the ratio (see desity of 
     # Uniform distribution )
     return(1.0 if ((prior_parameters_theta['min'] < theta_cand) & (theta_cand < prior_parameters_theta['max'])) else 0)
-
-# pp = {'min': 0, 'max': 2}
-# val1 = 1
-# val2 = 10
-
-# prior_ratio_uniform(1,1,pp,"a")
-# prior_ratio_uniform_fast(1,1,pp,"a")
-
-
-# for i in range(100):
-    # m = np.random.uniform()
-    # pp = {'min': m, 'max': m*10}
-    # val = np.random.uniform()
-    # val2 = np.random.uniform()
-    # print(f"m: {m}, val1: {val}, val2: {val2}")
-    # print(prior_ratio_uniform(val,val2,pp,"a"))
-    # print(prior_ratio_uniform_fast(val,val2,pp,"a"))
-    # print("")
-
-
-
 
 
 def prior_ratio_beta(theta_t, theta_cand, prior_parameters_theta, informative_priors):
@@ -278,13 +236,6 @@ def prior_ratio_normal(theta_t, theta_cand, prior_parameters_theta, informative_
     return np.exp( 1/(2*var)*( (theta_t-mu)**2 - (theta_cand-mu)**2 ))
 
 
-# for _ in range(1000):
-    # p = {'mean': np.random.random(1), 'sd': np.random.random(1)*5}
-    # x1 = prior_ratio_normal(1,2, p,1)
-    # x2 = prior_ratio_normal2(1,2, p,1)
-    # print(np.isclose(x1/x2,1))
-
-
 
 
 def prior_ratio_normal_inverse(theta_t, theta_cand, prior_parameters_theta, informative_priors):
@@ -334,12 +285,6 @@ def prior_ratio_asymmetric_laplace(theta_t, theta_cand, prior_parameters_theta, 
 # prior_ratio_asymmetric_laplace(1,0.2, {'scale':10., 'kappa': 0.5}, "aaa")
 
 
-# x = np.linspace(-1,2, 1000)
-# plt.plot(x,prior_ratio_asymmetric_laplace(0.05,x, {'scale':10., 'kappa': 0.5}, "aaa"))
-# plt.show()
-
-# proposals
-
 # def proposal_normal(theta_t, proposal_sd):
     # theta_cand = theta_t + stats.norm.rvs(loc=0, scale=proposal_sd)
     # return(theta_cand)
@@ -381,9 +326,7 @@ def proposal_double_trunc_rho(theta_t, proposal_sd):
 
 priors = {'alpha': prior_ratio_normal,
           'alpha_mean': prior_ratio_normal,
-          # 'alpha_mean': prior_ratio_asymmetric_laplace,
           'alpha_sd': prior_ratio_normal,
-          # 'alpha_sd': prior_ratio_halfT,
           'tau': prior_ratio_normal,
           'tau_mean': prior_ratio_gamma,
           'tau_sd': prior_ratio_normal,
@@ -394,11 +337,7 @@ priors = {'alpha': prior_ratio_normal,
           'phi': prior_ratio_normal_inverse,
           'piH': prior_ratio_beta,
           'piHicu': prior_ratio_beta,
-          # 'phi_infections': prior_ratio_normal,
-          # 'phi_deaths': prior_ratio_normal,
-          # 'phi_hospitalizations': prior_ratio_normal
           'beta_D': prior_ratio_cauchy,
-          # 'beta_voc': prior_ratio_normal,
           'beta_alpha': prior_ratio_normal,
           'beta_delta': prior_ratio_normal,
           'beta_sat': prior_ratio_uniform,
@@ -426,7 +365,6 @@ priors['phi_rep_cases'] = priors['phi']
 proposals = {'alpha': proposal_normal,
              'alpha_mean': proposal_normal,
              'alpha_sd': proposal_trunc,
-             # 'rho': proposal_double_trunc,
              'rho': proposal_double_trunc_rho,
              'tau': proposal_trunc,
              'tau_mean': proposal_trunc,
@@ -437,15 +375,9 @@ proposals = {'alpha': proposal_normal,
              'phi': proposal_trunc,
              'piH': proposal_double_trunc_rho,
              'piHicu': proposal_double_trunc_rho,
-             # 'piH':proposal_double_trunc,
-             # 'piHicu':proposal_double_trunc,
              'beta_D': proposal_normal,
-             # 'beta_voc': proposal_normal,
              'beta_alpha': proposal_normal,
              'beta_delta': proposal_normal,
-             # 'phi_infections': proposal_trunc,
-             # 'phi_deaths': proposal_trunc,
-             # 'phi_hospitalizations': proposal_trunc
              'beta_sat': proposal_trunc,
              'beta_sun': proposal_trunc,
              'beta_mon': proposal_trunc,
@@ -471,12 +403,10 @@ proposals['phi_rep_cases'] = proposals['phi']
 prior_likelihoods = {'R0': ratio_likelihood_normal,
                      'alpha': ratio_likelihood_normal,
                      'tau': ratio_likelihood_normal,
-                     # 'pi_H': ratio_likelihood_beta,
-                     # 'nb_trials': ratio_likelihood_discrete_iwas # für negative binomial model
                      }
 
 
-
+# old likelihood - only used in unittests for checks
 def ratio_likelihood(model, data, values_curr, values_cand, latent_variables_curr,
                      latent_variables_cand, country='all', start=7,
                      death_model=True, reporting_model=True, renewal_model_lv=True,
@@ -525,13 +455,6 @@ def ratio_likelihood(model, data, values_curr, values_cand, latent_variables_cur
         E_Ct_curr = basics.calculate_ECt(sumut_curr, R_t_curr, data, country,
                 values_curr, start)
 
-        ## hier koennte eine schnellere Version geschrieben werden fuer das updaten von R0 und alpha
-        ## wenn die Cts also konstant bleiben: dann koennen wir k! rauskuerzen, die untere Version funktioniert nur nicht!
-        #ratio_renewal_model = np.prod(
-        #                           (E_Ct_cand**C_t_cand/E_Ct_curr**C_t_curr)
-        #                           )*np.exp(np.sum(E_Ct_curr)-np.sum(E_Ct_cand))
-        #print(stats.poisson.pmf(C_t_cand, E_Ct_cand)/
-         #                             stats.poisson.pmf(C_t_curr, E_Ct_curr))
         if renewal_model_lv:
             ratio_renewal_model = np.prod(
                                           stats.poisson.pmf(I_t_cand, E_Ct_cand)/
@@ -564,10 +487,6 @@ def ratio_likelihood(model, data, values_curr, values_cand, latent_variables_cur
 
         ratio *= ratio_renewal_model
 
-    ## Harakiri: wenn hier ein Fehler kommt, dass man EDt fuer alle Laender braeuchte dann
-    ## ist das eine falsche Anfrage weil bis jetzt das death model nur fuer das updaten von
-    ## Ct benutzt wird und dieses Update ohnehin laenderspezifisch sein sollte! Falls eines Tages
-    ## pi_d geschaetzt werden soll (auch anhand von externer Daten) aendert sich das vielleicht
     if death_model:
         D_t = data.deaths
         E_Dt_cand = basics.calculate_EDt(C_t_cand, values_cand, data = pd.DataFrame())
@@ -576,12 +495,7 @@ def ratio_likelihood(model, data, values_curr, values_cand, latent_variables_cur
                                    (E_Dt_cand/E_Dt_curr)**D_t
                                    )*np.exp(np.sum(E_Dt_curr)-np.sum(E_Dt_cand))
 
-        #print('ratio_death_model')
-        #print(ratio_death_model)
         ratio *= ratio_death_model
-
-    # rho_t_cand = basics.calculate_long_rho(values_cand, data) # brauchen wir im Moment nicht - siehe basics.calculate long_rho
-    # rho_t_curr= basics.calculate_long_rho(values_curr, data)
 
     # reporting model:
     if reporting_model:
@@ -590,9 +504,6 @@ def ratio_likelihood(model, data, values_curr, values_cand, latent_variables_cur
         if 'rho_period' in data.columns:
             rho_t_cand = np.array([values_cand['rho']['rho_' + country][period] for period in data['rho_period'].values])
             rho_t_curr= np.array([values_curr['rho']['rho_' + country][period] for period in data['rho_period'].values])
-            # Achtung: Die folgenden 2 Zeilen sind fuer den Fall dass rho fix ist und rho_period vorhanden ist - dann müssen die oberen beiden auskommentiert und die entkommentiert werden
-            #rho_t_cand = values_cand['rho']['rho_' + country] # Harakiri: wenn Fehler rho == 'all' existiert nicht kommt also KeyError ist was schiefgegengen
-            #rho_t_curr = values_curr['rho']['rho_' + country]
         else:
             rho_t_cand = values_cand['rho']['rho_' + country] # Harakiri: wenn Fehler rho == 'all' existiert nicht kommt also KeyError ist was schiefgegengen
             rho_t_curr = values_curr['rho']['rho_' + country]
@@ -604,26 +515,9 @@ def ratio_likelihood(model, data, values_curr, values_cand, latent_variables_cur
 
         if(math.isnan(ratio_reporting_model)):
             print('Attention: reporting model was nan:' + country)
-       #     with open("reporting_model_nan", "a") as errfile:
-       #         errfile.write(str("None") + "\n")
-       # else:
-       #     with open("reporting_model_nan", "a") as errfile:
-       #         errfile.write(str("YAY") + "\n")
-
-
 
 
         ratio *= ratio_reporting_model
-    #print('ratio_reporting_model')
-    #print(ratio_reporting_model)
-
-    ## hier koennte eine schnellere Version geschrieben werden fuer das updaten von R0 und alpha
-    ## wenn die Cts also konstant bleiben: dann koennen wir k! rauskuerzen, die untere Version funktioniert nur nicht!
-    #ratio_renewal_model = np.prod(
-    #                           (E_Ct_cand**C_t_cand/E_Ct_curr**C_t_curr)
-    #                           )*np.exp(np.sum(E_Ct_curr)-np.sum(E_Ct_cand))
-
-
 
     if hospitalization_model:
 
@@ -715,7 +609,7 @@ def ratio_likelihood_nbinom(model, data, values_curr, values_cand,
                 # EI = (E_Ct_curr.values)
                 EI = E_Ct_curr
                 print("NA in renewal model")
-                import pudb;pu.db
+                # import pudb;pu.db
 
         ratio *= ratio_renewal_model
 
@@ -779,7 +673,8 @@ def ratio_likelihood_nbinom(model, data, values_curr, values_cand,
                                           )
                                     )
             if math.isnan(ratio_death_model):
-                import pudb;pu.db
+                print("NA in deah model")
+                # import pudb;pu.db
 
 
         ratio *= ratio_death_model
@@ -899,7 +794,7 @@ def ratio_likelihood_nbinom(model, data, values_curr, values_cand,
                 ii = np.where(basics.nbinom_alt_pmf(Cr_t, E_Crt_curr, phi_rep_cases_curr) == 0)
                 R = (Cr_t.values)
                 ER = (E_Crt_curr)
-                import pudb;pu.db
+                # import pudb;pu.db
 
                 print('Attention: reporting model was nan:' + country)
         ratio *= ratio_reporting_model
