@@ -37,13 +37,8 @@ class Parameter:
             sd = start_values['alpha_sd'] * 1.1
             self.samples[0] = stats.norm.rvs(loc=m, scale=sd)  # ziehe aus einer Normalverteilung als start wert
 
-        # elif name_parent in ['beta_sat', 'beta_sun']:
-            # self.samples[0] = start_values[name_parent][name]
-            # self.samples[0] = start_values[name]
         else:
             self.samples[0] = start_values[name]
-            # reporting_model = False
-            # renewal_model = True
 
         self.i = 0
         self.acceptance = np.empty(30000, dtype=np.bool)
@@ -52,28 +47,9 @@ class Parameter:
         self.prior_parameters = prior_parameters[name_parent]
         self.prior_ratio = lambda theta_cand: update.priors[name_parent](self.samples[self.i], theta_cand, self.prior_parameters, informative_priors)  # prior parameters könnte für jeden parameter aus einen ParameterVektor auch einzeln Informationen auslsesen. Dann müsste da einfach prior_parameters[name] stehen. Ist bis jetzt aber nicht vorgesehen
 
-        # hier wird die korrekte methode propose_value zugewiesen
         self.propose_value = lambda: update.proposals[name_parent](self.samples[self.i], self.proposal_sd)
 
-        # gibt True oder False, ob proposal_trunc genutzt wird
         self.calculate_proposal_ratio = update.proposals[name_parent].__name__ in ['proposal_trunc', 'proposal_double_trunc', 'propsal_trunc_uniform', 'proposal_double_trunc_rho']
-
-        # self.likelihood_ratio = lambda \
-                # values_t, values_cand,latent_variable_curr,latent_variable_cand:\
-                # update.ratio_likelihood(model,data, values_t,values_cand,\
-                        # latent_variable_curr, latent_variable_cand, \
-                        # country = country,death_model = False,\
-                        # reporting_model = reporting_model,\
-                        # renewal_model_lv = renewal_model,\
-                        # renewal_model_parameter = False,start = start)
-
-
-        # print("\n")
-        # print('Using following models for parameter:' + str(self.name))
-        # print('renewal_model:' +str(renewal_model))
-        # print('death_model:' +str(death_model))
-        # print('hospitalization_model:' +str(hospitalization_model))
-        # print('reporting_model:' +str(reporting_model))
 
         self.likelihood_ratio = lambda \
                 values_t, values_cand, latent_variable_curr, latent_variable_cand:\
@@ -101,23 +77,16 @@ class Parameter:
 
         sign = np.sign(diff)
         self.proposal_sd *= (1 + 0.1 * sign * change)
-        # with open('proposal_sds' ,'a') as ff:
-            # ff.write(str(self.name) + ': '+ str(self.proposal_sd) + '\n')
         print(self.name)
         print("Acceptance rate: " + str(round(acceptance_rate, 4)))
 
 
     def write_samples(self, path_results, thin):
         if (isinstance(self.name, np.integer)):  # for the case where the
-            # parameter is rho and is time varying - then name of rho is an
-            # np.integer
             file_name = path_results + 'results_' + 'rho_' + self.country + str(self.name) + ".txt"
 
-        #### begin Vorschlag Raphi
         elif (isinstance(self, PriorParameter)):
             file_name = path_results + 'results_' + self.name_parent + '_' + self.name + '.txt'
-        #### End Vorschlag Raphi
-
         else:
             file_name = path_results + 'results_' + self.name + ".txt"
 
@@ -269,12 +238,9 @@ class ParameterVector:
         nested dict to identify the hierarhcical order
         """
 
-        # vielleiht würde es für self.name = rho Sinn machen die daten zu
-        # dictionarisieren:
-        # data = basics.dictionarize_data(data)setnames(deaths, c("Country/Region", "v
         name_parent = name.split('_')[0]
 
-        if name_parent in ['beta', 'betaD']:  # blöde lösung - quick and dirty...
+        if name_parent in ['beta', 'betaD']:
             name_parent = name
 
         hierarchical_alpha = isinstance(keys, dict)  # checkt ob er in der ersten ebene von alpha ist
@@ -295,14 +261,13 @@ class ParameterVector:
         # this condition is only for parameter vectors with priors, else the
         # prior parameters are FixedParameters
         if (name in ['R0', 'tau']) or name[0:6] == 'alpha_':
-            # init R0 prior only (old version)
             # init hierarchical alpha prior (new version)
             name_intervention = name.split('_')[-1]
             for parm in prior_parameters[name_parent].keys():
                 self.prior_parameters[parm] = PriorParameter(parm,
                                                              precision,
                                                              proposal_sd,
-                                                             prior_parameters,  # ACHTUNG! Nimmt wahrscheinlich prior_parameters_R0 durch name_parent
+                                                             prior_parameters,
                                                              start_values,
                                                              name_parent=name_parent,
                                                              name_intervention=name_intervention)
@@ -312,7 +277,7 @@ class ParameterVector:
         else:
             prior_name = name.split('_')[0]  # wird gebraucht wegen der rekursion bei rho (es wird nur der erste teil von zb rho_Austria gebraucht)
 
-            if prior_name in ['beta', 'betaD']:  # blöde lösung - quick and dirty...
+            if prior_name in ['beta', 'betaD']:
                 prior_name = name
 
             for parm in prior_parameters[prior_name].keys():

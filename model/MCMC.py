@@ -50,7 +50,6 @@ class MCMC(object):
             start_values[chain]['correction_hospitalization_' + oos_country + '_oos'] = start_values[chain]['correction_hospitalization_' + oos_country]
             start_values[chain]['correction_hospitalization_' + oos_country] = start_values[chain]['correction_hospitalization_' + oos_country][:self.data[self.data.country == oos_country].shape[0]]
             fixed_parameters.append('correction_hospitalization_' + oos_country + '_oos')
-            # raise ValueError("fixed parameters füssen um ..._oos ergänzt werden, nicht um den normalen")
         else:
             self.data = data
             self.oos_data = None
@@ -59,7 +58,6 @@ class MCMC(object):
         self.model = model_specification['model']  # string - spezifieziert das model
         self.interventions = model_specification['interventions']  # sting liste - spezifieziert welche interventionen benutzt werden, muss koherent zu den alphas in den start values sein
         self.hierarchical_interventions = model_specification['hierarchical_interventions']  # logical - definiert ob hierarchisches alpha benutzt wird
-        # self.path = path_results + "_" + self.model +"_"+ chain
 
         self.adapt_reporting_weekend = model_specification['adapt_reporting_weekend']
 
@@ -106,18 +104,9 @@ class MCMC(object):
 
 
     def update_chains(self):
-        # import pudb;pu.db
         for key in self.parameters.keys():
-            # if key == 'alpha':
-                # import pudb; pu.db
-            # print('updating variable:' + str(key))
             self.parameters[key].update(self.get_current_values(),
                                     self.latent_variables)
-            # if key == 'phi_rep_cases':
-                # print(self.get_current_values()['phi_rep_cases'])
-            # if key == 'beta_mon':
-                # print(self.get_current_values()['beta_mon'])
-
         if not self.fix_latent_variable:
             self.update_latentVariables()
 
@@ -134,38 +123,21 @@ class MCMC(object):
 
     def run_adaptive_phase(self, nb_iterations, nb_phases):
         print("starting adaptive phase......")
-        # pbar = pb.ProgressBar(maxval=nb_phases).start()
         for phase in range(nb_phases):
             print('Adaptive phase '+ str(phase))
             for iterations in range(nb_iterations):
                 self.update_chains()
-            # pbar.update(phase)
-            # if 'alpha' in self.parameters.keys():
-                # if not 'alpha' in self.fixed_parameters:
-                    # print('Current mean for alpha_lockdown:')
-                    # print(self.parameters['alpha'].parameters['alpha_lockdown'].get_statistics()['mean'])
             self.adapt_proposals(nb_iterations, phase)
-            # with open('proposal_sds' ,'a') as ff:
-                # ff.write( '\n')
-                # ff.write('Adaptive_phase: '+ str(phase) + '\n')
-            # with open('proposal_sds_lv' ,'a') as ff:
-                # ff.write( '\n')
-                # ff.write('Adaptive_phase: '+ str(phase) + '\n')
-
-        # pbar.finish()
 
 
     def run_burnin(self, nb_burnin):
         print('Start burnin-phase')
         self.reset_values(nb_burnin)
-        # pbar = pb.ProgressBar(maxval=nb_burnin).start()
         for i in range(nb_burnin):
             self.update_chains()
             # pbar.update(i)
             if i > 1 and i % 1000 == 0:
                 print(f'Iteration {i}/{nb_burnin} [BURNIN] finished')
-
-        # pbar.finish()
         print('End Burnin-phase')
 
     def run_algorithm(self, nb_iterations, thin=1, prediction_interval=300, save_chains=True):
@@ -179,10 +151,8 @@ class MCMC(object):
 
         print('Start algorithm')
         self.reset_values(nb_iterations)
-        # pbar = pb.ProgressBar(maxval=nb_iterations).start()
         for i in range(nb_iterations):
             self.update_chains()
-            # pbar.update(i)
 
             if i > 0 and i % prediction_interval == 0:
                 current_prior_values = {}
@@ -199,14 +169,9 @@ class MCMC(object):
 
             if i > 0 and i % 1000 == 0:
                 print(f'Iteration {i}/{nb_iterations} [SAMPLING] finished')
-                # if 'alpha' in self.parameters.keys():
-                    # if not 'alpha' in self.fixed_parameters:
-                        # print('Current mean for alphalockdown:')
-                        # print(self.parameters['alpha'].parameters['alpha_lockdown'].get_statistics()['mean'])
                 self.write_statistics()
                 if save_chains:
                     self.write_chains(thin)
-        # pbar.finish()
         # final write
         if save_chains:
             self.write_chains(thin)
@@ -252,9 +217,6 @@ class MCMC(object):
             parameters = self.parameters
             for key in parameters:
                 stats = parameters[key].get_statistics()
-                #result.write('\n \n The estimate of {} is {} (median) (mean: {}) [{};{}] with an acceptance rate of {}'.format(key, 
-                #             stats['median'], stats['mean'], stats['IC_2.5'], stats['IC_97.5'], stats['acceptance']))
-
                 result.write(key + ':')
                 result.write(str(stats))
                 result.write('\n \n')
@@ -298,16 +260,10 @@ class MCMC(object):
         :param thin: Info about the thinning to use. A thinning of 10 implies a
             fill trjectory length of the parameter x*(10-1)+1
         """
-        # ToDo:
-        # Check as in the initialization if the predictions object containers
-        # enough space for the loaded values AND the predictions made in the
-        # future, i.e. made preds + preds to made
-
         self.reset_values(nb_iterations)  # sets samples and acceptance in all params nd lv to initial state
         for key in self.parameters:
             self.parameters[key].set_state(path, chain, thin)
 
-        # needs the updated values (uses them to set Xis and other stuff)
         self.latent_variables.set_state(self.get_current_values(), path, chain,
                                         thin)
 
@@ -330,7 +286,6 @@ class MCMC(object):
                                          'piH': 2,
                                          'piHicu': 2,
                                          'beta_D': 2,
-                                         # 'beta_voc':2,
                                          'beta_alpha': 2,
                                          'beta_delta': 2,
                                          'beta_sat': 2,
@@ -349,7 +304,6 @@ class MCMC(object):
                               ):
         parameter_names = start_values[chain].keys()
         data_dict = dictionarize_data(self.data)
-        #  alpha_keys =  ['school', 'isolating', 'events', 'lockdown', 'distancing']
         alpha_keys = self.interventions
         alpha_data = self.data
         if self.hierarchical_interventions:
@@ -389,14 +343,12 @@ class MCMC(object):
                                                                      start=self.epidemic_start)
                 else:
                     data = self.data
-                    # name_parent = None
                     if parameter == 'phi_infections':
                         renewal_model = True
                         death_model = False
                         hospitalization_model = False
                         intensiveCare_model = False
                         reporting_model = False
-                        # name_parent = 'phi'
                     elif parameter in ['phi_hospitalizations']:
                         renewal_model = False
                         death_model = False
@@ -404,7 +356,6 @@ class MCMC(object):
                         intensiveCare_model = False
                         reporting_model = False
                         data = dictionarize_data(data)
-                        # name_parent = 'phi'
                     elif parameter in ['phi_intensiveCare']:
                         renewal_model = False
                         death_model = False
@@ -412,7 +363,6 @@ class MCMC(object):
                         intensiveCare_model = True
                         reporting_model = False
                         data = dictionarize_data(data)
-                        # name_parent = 'phi'
                     elif parameter == 'phi_deaths':
                         renewal_model = False
                         death_model = True
@@ -420,7 +370,6 @@ class MCMC(object):
                         intensiveCare_model = False
                         reporting_model = False
                         data = dictionarize_data(data)
-                        # name_parent = 'phi'
                     elif parameter == 'phi_rep_cases':
                         renewal_model = False
                         death_model = False
@@ -428,10 +377,7 @@ class MCMC(object):
                         intensiveCare_model = False
                         reporting_model = True
                         data = dictionarize_data(data)
-                        # name_parent = 'phi'
-                    # elif parameter in ['tau', 'beta_voc']:
                     elif parameter in ['tau', 'beta_alpha', 'beta_delta']:
-                        # tau is now a ParameterVector. this condition should never be true for tau
                         if parameter == 'tau':
                             raise RuntimeError("tau should be a ParameterVector")
                         renewal_model = True
@@ -462,42 +408,3 @@ class MCMC(object):
                                                            intensiveCare_model=intensiveCare_model,
                                                            reporting_model=reporting_model
                                                            )
-
-
-# Initialization by hand:
-
-#        self.parameters= {#'sigma_R': Parameter('sigma_R', model, precision,
-#                           #                  proposal_sd, prior_parameters, start_values[chain],
-#                            #                 self.data),
-#                          'alpha': ParameterVector('alpha', alpha_keys, model, precision,
-#                                              proposal_sd, prior_parameters,
-#                                              start_values[chain], self.data),
-#                          'tau': Parameter('tau',model, precision,
-#                                              proposal_sd, prior_parameters,
-#                                              start_values[chain], self.data),
-#                          'rho': ParameterVector('rho', data_dict.keys(),
-#                               model, precision, proposal_sd, prior_parameters,
-#                                              start_values[chain], data_dict),
-#                          'R0': ParameterVector('R0', data_dict.keys(),
-#                               model, precision, proposal_sd, prior_parameters,
-#                                              start_values[chain], data_dict)                          
-#
-#                         }
-#
-#        self.parameters['gamma'] = FixedParameter('gamma', start_values[chain]['gamma'])
-#        self.parameters['pi_D'] = FixedParameter('pi_D', start_values[chain]['pi_D'])
-#        self.parameters['xi_D'] = FixedParameter('xi_D', start_values[chain]['xi_D'])
-#        self.parameters['xi_C'] = FixedParameter('xi_C', start_values[chain]['xi_C'])
-#        self.parameters['xi_H'] = FixedParameter('xi_H', start_values[chain]['xi_H'])
-#        self.parameters['xi_R'] = FixedParameter('xi_R', start_values[chain]['xi_R'])
-#        self.parameters['pi_H'] = FixedParameter('pi_H', start_values[chain]['pi_H'])
-#        #self.parameters['tau'] = FixedParameter('tau', start_values[chain]['tau'])
-
-
-
-
-
-
-
-
-

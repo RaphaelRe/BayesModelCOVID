@@ -42,22 +42,10 @@ def load_data(name, data_type='simulated', model='infections', dictionarize=Fals
     """ The function load_data takes the name of a csv file and loads it as a
     pandas data frame in Python.
     """
-    if data_type == 'real':
-        # variables = ['index', 'date', 'country', 'school', 'isolating',
-        #    'events', 'lockdown', 'distancing', 'reported_cases', 'deaths']
-
+    if data_type in ['real', 'simulated']:
         data = pd.read_csv(name, sep=',', quotechar='"', header=0)
-
-
-    elif data_type == 'simulated':
-        # variables = ['index', 'date', 'country', 'school', 'isolating',
-        # 'events', 'lockdown', 'distancing',
-        # 'R_t', 'cases', 'reported_cases', 'deaths']
-        # variables = ['index', 'date', 'country', 'school', 'isolating',
-        #     'events', 'lockdown', 'distancing',
-        #     'R_t', 'infections', 'cases', 'reported_cases', 'deaths']
-
-        data = pd.read_csv(name, sep=',', quotechar='"', header=0)
+    else:
+        return None
 
     data = data.rename(columns={"repC_t": "reported_cases",
                                 "D_t": "deaths",
@@ -111,25 +99,6 @@ def split_oos_data(data, oos_country, nb_days_oos_init):
 
     return data_trunc, data_oos
 
-
-
-
-
-# correction factor für die bereits infizierten
-# def calculate_correction_factor1(infections, parameter_values): # infections ist ein dict das für jedes Land die infections gibt
-    # correction_factors1 = {country_key: calculate_correction_factor1_country(
-        # infections[country_key], parameter_values, country_key) for country_key in infections}
-    # return correction_factors1
-
-
-# def calculate_correction_factor1_country(infections_country, parameter_values, country): 
-    # N = parameter_values['N_'+country]
-    # # cf = 1 - parameter_values['correction_factors']['probability_reinfection']
-    # cf = 1 - parameter_values['probability_reinfection']
-    # cf_unshifted = np.cumsum(infections_country)/N * cf
-    # # shift by one day because the sum runs only until th eprevious day
-    # correction_factor1 = np.concatenate(([0], cf_unshifted[:-1]))
-    # return correction_factor1
 
 
 def initialize_country_specific_Xi_R(parameter_values, country):
@@ -481,35 +450,6 @@ def calc_sumut_faster(cases, gamma, start, lim):
 
 
 
-
-# jax version.. just an idea..in the current way its sloer that jit compiling
-# beware! needs jax arrays NOT numpy
-# import jax.numpy as jnp
-# from jax import jit as jaxjit
-
-
-# # calculates sumut at given time point t
-# def foo(cases, gamma, t):
-    # return (jax.lax.dynamic_slice(cases, [0], [t]) * jnp.flip(jax.lax.dynamic_slice(gamma, [1], [t]))).sum()
-
-# # calculates it over from time start to end
-# # @jaxjit doesent work because of WHY???
-# def vfoo(jc, jg,start):
-    # return jnp.asarray([foo(jc, jg, t) for t in range(start-1, len(jc))])
-
-
-#def calculate_EDt_old(cases, parameter_values):
-#
-#    ED_t = np.zeros(cases.shape)
-#    for t in range(len(cases)):
-#        sum_u_t = 0
-#        for u in range(t+1):
-#            sum_u_t += cases[u] * parameter_values['xi_D'][t-u]
-#        ED_t[t] = sum_u_t*parameter_values['pi_D']
-#
-#    return(ED_t)
-
-
 def calculate_EDt(cases, parameter_values, data, country=None, Xi_D=None):
     if 'improved_treatment' in data.columns:
         improved_treatment = data.improved_treatment.values
@@ -688,44 +628,6 @@ def nbinom_alt_rvs(mu, phi):
     return stats.nbinom.rvs(*convert_params_nbinom(mu, phi))
 
 
-
-
-##########
-# faster versions. Is faster in isolated tests, but is slower
-# than version above. I don't understand why
-
-# pseudo functions, calls the functions below with the converter
-# def nbinom_alt_pmf_fast(counts, mu, phi):
-    # return nbinom_pmf_fast(counts, *convert_params_nbinom(mu, phi))
-
-# def nbinom_alt_log_pmf_fast(counts, mu, phi):
-    # return nbinom_lpmf_fast(counts, *convert_params_nbinom(mu, phi))
-
-
-# #  real pmf and log pmf
-# def nbinom_pmf_fast(k, n, p):
-    # # faster version which hardcodes the density. Is at least 3 times faster
-    # return (binom(k+n-1,n-1) * p**n * (1-p)**k)
-
-# def nbinom_lpmf_fast(k, n, p):
-    # # faster version which hardcodes the density. Is at least 3 times faster
-    # return np.log(binom(k+n-1,n-1) * p**n * (1-p)**k)
-
-# speedtest; is faster here, but not when called in the MCMC scheme
-# x = np.arange(100)
-# mu = np.arange(100)+1
-# phi = 0.01
-
-
-# x[:10] = np.na
-# np.isnan(x)
-# %timeit nbinom_alt_log_pmf(x,mu,phi)
-# %timeit nbinom_alt_log_pmf_fast(x,mu,phi)
-
-# nbinom_alt_pmf(x,mu,phi)
-# nbinom_alt_pmf_fast(x,mu,phi)
-
-# convert_params_nbinom(mu, phi)
 
 def asymmetric_laplace_log_pdf(x, scale, kappa):
     # this condition is not necessary since the proposals will always be poitive
