@@ -32,7 +32,6 @@ def define_prior_values():
                         'tau_sd': {'mean': 0, 'sd': 10},
                         'R0': {'mean': None, 'sd': None},
                         'R0_mean': {'mean': 3.25, 'sd': 0.05},
-                        # 'R0_sd': {'mean': 0, 'sd': 0.035},
                         'R0_sd': {'mean': 0, 'sd': 0.01},
                         'rho': {'a': 1, 'b': 1, 'scale': 3},
                         'phi_infections': {'inv_mean': 0, 'inv_sd': 0.015},
@@ -94,7 +93,7 @@ def define_proposal_sds():
     return proposal_sds
 
 
-def define_start_values(file_name='data_europe.csv', rnd_seed=-1):
+def define_start_values(file_name, rnd_seed):
     """
     Function defines start values
     """
@@ -105,14 +104,6 @@ def define_start_values(file_name='data_europe.csv', rnd_seed=-1):
     data_path = f'{PATH}/../data/'
     # read one dataset, required to iterate over contries etc
     data = load_data(f'{data_path}/{file_name}')
-    # data.head().T
-
-    # make first eho_period longer to get better power
-    # rhotmp = data.rho_period.values
-    # rhotmp[(rhotmp == 1) | (rhotmp == 2)] = 2
-    # data.rho_period = rhotmp
-    # data.rho_period = data.rho_period - 1
-
 
     # drop summer since it is the reference and rename seasons to correct names
     data.drop('summer', axis=1, inplace=True)
@@ -283,12 +274,6 @@ def run_chain(chain, path, file_name, rnd_seed):
                          'autumn': 'seasonAutumn'},
                 inplace=True)
 
-    # make first eho_period longer to get better power
-    # rhotmp = data.rho_period.values
-    # rhotmp[(rhotmp == 1) | (rhotmp == 2)] = 2
-    # data.rho_period = rhotmp
-    # data.rho_period = data.rho_period - 1
-
     # nowcasting not necessary, therefore 1
     data['pi_nd'] = 1
     data['pi_nc'] = 1
@@ -324,7 +309,7 @@ def run_chain(chain, path, file_name, rnd_seed):
                            }
 
     # Define fixed parameters
-    # ATTENTION! fixed_params is a string list defining the fixed parameters
+    # in this function, fixed_params is a string list defining the fixed parameters
     fixed_params = ['gamma', 'pi_D', 'xi_D', 'xi_C', 'xi_H', 'xi_Hicu', 'xi_R']
     fixed_params.append('probability_reinfection')
     fixed_params.append('correction_first_vaccination')
@@ -377,7 +362,6 @@ def run_chain(chain, path, file_name, rnd_seed):
                                 adaptive_phases=10,
                                 thin=100,
                                 prediction_interval=300)
-
 
 
 if __name__ == '__main__':

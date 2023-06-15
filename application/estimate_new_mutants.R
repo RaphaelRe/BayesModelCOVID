@@ -1,7 +1,15 @@
+################################################################################
+### please note that due to changes in the data bases, the script does not work anymore
+################################################################################
+
 library(data.table)
 library(ggplot2)
+library(magrittr)
+
+# weekly data on vaccinations
 d <- fread("https://opendata.ecdc.europa.eu/covid19/virusvariant/csv/data.csv")
 
+# add date: Assume always mid of the week
 todate <- function(yw){
   a <- yw
   stringi::stri_sub(a, 6,5) <- "W"
@@ -32,7 +40,7 @@ d[country == "Spain" & source == "GISAID" & variant == "B.1.1.7" & date < "2020-
 
 
 
-estimate_proportion <- function(country_sel, d, variant_sel = "B.1.1.7",plot = T){
+estimate_proportion <- function(country_sel, d, variant_sel = "B.1.1.7", plot = F){
   if (!(country_sel %in% d$country)) stop("Country not in dataset")
   y <- d[country == (country_sel) & variant ==  (variant_sel) & source == "GISAID", .(date,percent_variant, source)]
   if (country_sel == "Hungary"){
@@ -44,22 +52,23 @@ estimate_proportion <- function(country_sel, d, variant_sel = "B.1.1.7",plot = T
   start_date <- y$date[1]
   start_date <- y[percent_variant > 0 ]$date[1]-7
   
-  # let it start 2 weeks before
+  # let it start earlier (pad with zeros)
   y <- y[date >= (start_date)]$percent_variant %>% c(0, 0,0,.) %>% data.table::nafill(type = "locf")
-  # mean over sources when more than one is available
-  # y <- y[, mean(percent_variant), by = date]$V1 %>% c(0,.)
   
   y <- y[1:which(y == max(y, na.rm = T))] /100
   x <- 0:(length(y)-1)
-  
+ 
+  # sigmoid function
   foo <- function(x, b = 0.4,c = 10){
     1/(1 + exp(-b * (x-c)))
   }
-  
+ 
+  # squared loss
   loss <- function(pars){
     sum(abs((y - foo(x, pars[1],pars[2])))^2)
   }
-  
+ 
+  # optimizer function
   optim_sigmoid <- function(pars){
     opt <- optim(pars, loss, method = "BFGS")
     return(list(par = opt$par, loss = opt$value))
