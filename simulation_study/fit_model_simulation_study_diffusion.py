@@ -310,14 +310,10 @@ def run_chain(path, file_name, chain, seed):
                 # oos_country=oos_country
                 )
 
-    # algo.run_adaptive_algorithm(iterations=50001, burnin=20000,
-                                # adaptive_phases=10, thin=100,
-                                # prediction_interval=300)
+    algo.run_adaptive_algorithm(iterations=50001, burnin=20000,
+                                adaptive_phases=10, thin=100,
+                                prediction_interval=300)
 
-    # very short period to test, whether algo is sampling everything
-    algo.run_adaptive_algorithm(iterations=4, burnin=1,
-                                adaptive_phases=0, thin=1,
-                                prediction_interval=3)
 
 
 if __name__ == '__main__':

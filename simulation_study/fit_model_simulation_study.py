@@ -15,7 +15,6 @@ from basics import load_data, load_time_distribution, load_reporting_delay_distr
 
 PATH = os.getcwd()
 NB_DATASETS_BATCH = 50  # the number of datasets in one batch, code uses two batches, therefore batch=50 means 100 datasets
-CORES = 50
 
 np.random.seed(seed=123)
 
@@ -310,14 +309,10 @@ def run_chain(path, file_name, chain, seed):
                 # oos_country=oos_country
                 )
 
-    # algo.run_adaptive_algorithm(iterations=50001, burnin=20000,
-                                # adaptive_phases=10, thin=100,
-                                # prediction_interval=300)
+    algo.run_adaptive_algorithm(iterations=50001, burnin=20000,
+                                adaptive_phases=10, thin=100,
+                                prediction_interval=300)
 
-    # very short period to test, whether algo is sampling everything
-    algo.run_adaptive_algorithm(iterations=5, burnin=1,
-                                adaptive_phases=0, thin=1,
-                                prediction_interval=3)
 
 
 if __name__ == '__main__':

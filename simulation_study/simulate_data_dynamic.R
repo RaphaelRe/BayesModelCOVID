@@ -4,7 +4,7 @@
 
 PATH_DATA = "../data/"
 
-N_CORES <- 5 # the number of used cores to generate data. Simulation time is not 
+N_CORES <- 50 # the number of used cores to generate data. Simulation time is not 
 # THAT long but can save a view minutes if N_DATASETS is high
 
 ### libraries
@@ -24,16 +24,16 @@ N_DATASETS <- 5
 ### other parameters
 N_COUNTRY <- 10
 N_DAYS <- 600
-POPULATION <- 100000000 # arbitrary countroes, can be the same over all countries
+POPULATION <- 100000000 # arbitrary population size, can be the same over all countries
 
 
 ### load time distributions
 gamma <- fread(paste0(PATH_DATA, "gamma_generation_time.csv"))[[3]]
-Xi_C <- fread(paste0(PATH_DATA, "Xi_C_incubation_period.csv"))[[3]] # %>% append(rep(0,200))
-Xi_repC <- fread(paste0(PATH_DATA, "Xi_R_reporting_times_weekdays_estimated_lgl.csv"))[,-c(1:2)] #  %>% list(., data.table(matrix(rep(0,7*200), ncol=7))) %>% rbindlist(use.names = F)
-Xi_D <- fread(paste0(PATH_DATA, "Xi_D_symptoms_to_death_weekdays.csv"))[[3]] # %>% append(rep(0,200))
-Xi_H <- fread(paste0(PATH_DATA, "XiH_all.csv"))[[1]] #  %>% append(rep(0,200))
-Xi_Hicu <- fread(paste0(PATH_DATA, "XiH_all.csv"))[[3]]#  %>% append(rep(0,200))
+Xi_C <- fread(paste0(PATH_DATA, "Xi_C_incubation_period.csv"))[[3]]
+Xi_repC <- fread(paste0(PATH_DATA, "Xi_R_reporting_times_weekdays_estimated_lgl.csv"))[,-c(1:2)] 
+Xi_D <- fread(paste0(PATH_DATA, "Xi_D_symptoms_to_death_weekdays.csv"))[[3]]
+Xi_H <- fread(paste0(PATH_DATA, "XiH_all.csv"))[[1]]
+Xi_Hicu <- fread(paste0(PATH_DATA, "XiH_all.csv"))[[3]]
 
 
 ### define parameters for tau, each country has its own tau deviating from the overall
@@ -41,7 +41,7 @@ mean_tau <- 10
 sd_tau <- 2
 
 
-### overdispersion negative binomial distributions, 1000 is rather small and gives stability for the simulation
+### overdispersion negative binomial distributions, 1000 seens to give stability in the simulation
 sapply(c("inf", "dea", "rep", "hos", "icu"), function(x){
   name <- paste0("phi_", x)
   assign(name, 1000, envir = .GlobalEnv)
@@ -58,14 +58,14 @@ sd_R0 <- 0.1
 
 ### propability reinfection
 p_reinf <- 0.16
-# p_reinf <- 1 # would imply a correction factor 1 of 0
+# p_reinf <- 1 # would imply a correction factor1 of 0, i.e. full reinfection
 
 
 ### Variants of concern
 # over-contagiousness of VOCs
 beta_alpha <- 1.4
 beta_delta <- 2.4
-# beta_alpha <- 1 # would imply same contagiousness as wild type
+# beta_alpha <- 1 # would imply same contagiousness as original type
 # beta_delta <- 1
 
 # load fractions from approximated data, use UK, could anything, but Uk has 
@@ -89,11 +89,6 @@ vaccinations1 <- rep(0, N_DAYS)
 vaccinations1[281:N_DAYS] <- seq(0,0.8, len=N_DAYS-280-40) %>% append(rep(0.8,40))
 
 vaccinations2 <- c(rep(0,40),vaccinations1[1:(N_DAYS-40)])
-
-# alternative where vaccinations2 converges to 80 at time 500, version above probably better
-# vaccinations2 <- rep(0, N_DAYS)
-# vaccinations2[(281+15):N_DAYS] <- seq(0,0.8, len=N_DAYS-280-15)
-# vaccinations2[(281+40):N_DAYS] <- seq(0,0.8, len=N_DAYS-280-40)
 
 # plot(1:N_DAYS, vaccinations1)
 # points(1:N_DAYS,vaccinations2)
@@ -130,7 +125,7 @@ piHicu <- sapply(piD, function(x) x/piD[1])*piHicu
 
 
 ### rhos aka reporting ratio
-### make only 5 periods. This helps with the sampling time in the algorithm
+### make only 5 periods. This helps with the sampling time in the algorithm as there a less parameters to estimate
 rhos <- 1/5:1
 
 
@@ -138,7 +133,6 @@ rhos <- 1/5:1
 ###############################################################################
 # for the simulation function which generates one dataset we need some helpers
 
-# but first:
 # short cpp function to make a faster convolution and sampling, saves a few seconds
 # can be used for calculation of Dt, Ht, Hicut
 # NOT for repCt, Ct and It, need some special tweaks, maybe I'll adapt that later
@@ -220,7 +214,7 @@ cppFunction(
 
 
 
-## define sigmoid function which defines the probability if NPI k gets active
+## define sigmoid function which defines the probability whether NPI k gets active
 sigmoid <- function(x, b0,b1){
   1/(1+exp(-(b0+b1*x)))
 }
@@ -252,7 +246,7 @@ bb3 <- 0.0004 # NPI3
 bb4 <- 0.0003 # NPI4
 bb5 <- 0.0001 # NPI5
 
-
+# this plot shows th eprobability that the k-th NPI is getting active as afunction of the ICU occupancy
 grid <- 0:20000
 plot(grid, sigmoid(grid, bb0, bb1), type = "l", ylim=c(0,1))
 lines(grid, sigmoid(grid, bb0, bb2), type = "l", col=2)
@@ -263,7 +257,6 @@ lines(grid, sigmoid(grid, bb0, bb5), type = "l", col=5)
 
 
 ### define function to simulate data
-
 simulate_data_country <- function(seed=321){
   # This function simulates the data for ONE country using the objects from above
   set.seed(seed)
@@ -293,7 +286,7 @@ simulate_data_country <- function(seed=321){
     proportion_alpha*R0*beta_alpha + 
     proportion_delta*R0*beta_delta
   
-  ### sample 1st value, i.e. index cases from poisson with rate tau
+  ### sample 1st value, i.e. index cases from nbinom with rate tau
   I_1 <- rnbinom(1, mu=tau, size=phi_inf)
   
   ### use generation time to generate the dynamics of the pandemic
@@ -314,7 +307,7 @@ simulate_data_country <- function(seed=321){
   cfull_t_vec[1] <- 1
   
   #### generate infections dynamically
-  # at each time point t, calculate a probability whether NPI_k gets online
+  # at each time point t, calculate a probability whether NPI_k gets active
   
   # assign states of NPIs
   state_NPI1 <- rep(F, N_DAYS)
@@ -322,9 +315,6 @@ simulate_data_country <- function(seed=321){
   state_NPI3 <- rep(F, N_DAYS)
   state_NPI4 <- rep(F, N_DAYS)
   state_NPI5 <- rep(F, N_DAYS)
-  
-  # NPI1 gets active after 30 days for the rest of the pandemic
-  # state_NPI1[31:N_DAYS] <- T
   
   # calculate the first Ct, loop starts at t=2, need decimals and Ct[1]
   Sumut <-  I_t[1] * Xi_C[1]
@@ -338,7 +328,7 @@ simulate_data_country <- function(seed=321){
   
   for (t in 2:N_DAYS){
     ### check whether NPI_k gets active at t
-    # if NPI gets active it stays active for 60 to 120 days
+    # if NPI gets active it stays active for a random number of days between 60 to 120 days
     for (npi in 1:5) {
       NPI <- paste0("state_NPI",npi)
       if (!get(NPI)[t]) {
@@ -388,7 +378,6 @@ simulate_data_country <- function(seed=321){
     # }
     # I_t[t] <- rnbinom(1, mu = sumut*Rt, size = phi_inf)
     I_t[t] <- calc_one_t_cpp(t, I_t[1:t], gamma, Rt, phi_inf)
-    # print("test whether the comment version gives exctly the same results!!!, Maybe add a t-1 in the cpp call")
     
     #### generate Ct
     
@@ -497,31 +486,12 @@ simulate_data_country <- function(seed=321){
   H_t <- partial_conv_cpp(C_t, Xi_H, piH, phi_hos)
   data[, H_t := H_t]
   
-  
-  ### add seasonality
-  # NOT REQUIRED IN SIMULATION
-  # define_dummy <- function(x, months){
-  #   return(as.numeric(x %in% months))
-  # }
-  # 
-  # define_variable <- function(d, name, months){
-  #   d[,(name) := define_dummy(month(date), months)]
-  #   return(d)
-  # }
-  # 
-  # define_variable(data, "winter", c(12,1,2))
-  # define_variable(data, "spring", c(3,4,5))
-  # # define_variable(data, "summer", c(6,7,8)) # actually not required
-  # define_variable(data, "autumn", c(9,10,11))
-  # 
-  
   # add further required colmuns
   data[, ifr_t_m := piD]
   data[, first_vaccination := vaccinations1]
   data[, second_vaccination := vaccinations2]
   data[, alpha := proportion_alpha]
   data[, delta := proportion_delta]
-  
   
   return(data[])
 }
@@ -586,9 +556,6 @@ ggplot(d_tmp)+
   geom_line(aes(date, Hicu_t), col="darkblue")+
   geom_line(aes(date, H_t), col="blue")+
   facet_wrap(~country, scales = "free")
-
-# fwrite(d_tmp, "data_sim_dynamic.csv")
-
 
 
 ### generate N_DATASETS datasets

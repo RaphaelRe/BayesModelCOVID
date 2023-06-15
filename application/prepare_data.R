@@ -1,6 +1,8 @@
 ################################################################################
 # This script prepares the data to fit the model
 ################################################################################
+# plots are commented out
+
 
 library(dplyr)
 library(magrittr)
@@ -36,13 +38,11 @@ d <- d[country %in% countries]
 
 # NAs in data?
 d$cases %>% is.na() %>% sum
-
-# plot
-ggplot(d) + geom_line(aes(date, cum_cases, color = country))
+# ggplot(d) + geom_line(aes(date, cum_cases, color = country))
 
 # add differences
 d[, cases := c(NA, diff(cum_cases)), by = country]
-ggplot(d) + geom_line(aes(date, cases, color = country))
+# ggplot(d) + geom_line(aes(date, cases, color = country))
 
 # set negative values to 0 firstly
 d[cases <= 0, cases := 0]
@@ -61,26 +61,24 @@ setorder(dd, country, date)
 
 
 dd <- dd[country %in% countries]
-
-# plot
-ggplot(dd) + geom_line(aes(date, cum_deaths, color = country))
+# ggplot(dd) + geom_line(aes(date, cum_deaths, color = country))
 
 # add differences
 dd[, deaths := c(NA, diff(cum_deaths)), by = country]
-ggplot(dd) + geom_line(aes(date, deaths, color = country))
+# ggplot(dd) + geom_line(aes(date, deaths, color = country))
 
 
 # remove 0
 dd[deaths <= 0, deaths := 0]
-ggplot(dd) +geom_line(aes(x = date, y = deaths, col = country))
+# ggplot(dd) +geom_line(aes(x = date, y = deaths, col = country))
 
 
 ####  bring cases and deaths together
 data <- merge(d,dd, all = T)
 
-ggplot(data) + 
-  geom_line(aes(date, deaths, col = country), alpha = 0.6, linetype = "dashed") + 
-  geom_line(aes(date, cases, col = country), alpha = 0.6)
+# ggplot(data) + 
+  # geom_line(aes(date, deaths, col = country), alpha = 0.6, linetype = "dashed") + 
+  # geom_line(aes(date, cases, col = country), alpha = 0.6)
 
 data[, c("cum_cases", "cum_deaths") := NULL]
 setnames(data, c("cases", "deaths"), c("repC_t", "D_t"))
@@ -126,7 +124,7 @@ data <- merge(data, rho_period, all.x = T)
 
 #################################
 # add weekdays (start of the week is encoded on monday with 1 and runs up to 7)
-data[, weekday := lubridate::wday(date, week_start = T)]
+data[, weekday := lubridate::wday(date, week_start = 1)]
 
 
 ##########
@@ -140,7 +138,9 @@ data <- merge(data, data_voc, all.x = T)
 
 ##################
 # Add vaccinations
-vaccs <- fread("https://covid.ourworldindata.org/data/owid-covid-data.csv") %>%
+# vaccs <- fread("https://covid.ourworldindata.org/data/owid-covid-data.csv") %>%
+  # select(c("location","date","population", "people_vaccinated", "people_fully_vaccinated"))
+vaccs <- fread("../data/data_vaccination/owid-covid-data.csv") %>%
   select(c("location","date","population", "people_vaccinated", "people_fully_vaccinated"))
 
 vaccs[,date := as.Date(date)]
@@ -148,22 +148,12 @@ vaccs[,date := as.Date(date)]
 vaccs <- vaccs[location %in% countries]
 vaccs[, first_vaccination := nafill(people_vaccinated/population, "locf"), by = location]
 vaccs[, second_vaccination := nafill(people_fully_vaccinated/population, "locf"), by = location]
-# viz
-melt(vaccs, id.vars = c("location", "date"), measure.vars = c("first_vaccination", "second_vaccination")) %>% 
-  ggplot(.) + geom_line(aes(date, value, color = location))+facet_grid(rows="variable")
+
+# melt(vaccs, id.vars = c("location", "date"), measure.vars = c("first_vaccination", "second_vaccination")) %>% 
+  # ggplot(.) + geom_line(aes(date, value, color = location))+facet_grid(rows="variable")
 
 setnames(vaccs, "location", "country")
 vaccs[country == "United Kingdom", country:= "UnitedKingdom"]
-
-# plot vaccination for one country
-# vaccs_country <- vaccs[country == "Germany"]
-# cols <- c("first_vaccination", "second_vaccination")
-# vaccs_country[, (cols) := lapply(.SD, nafill, fill=0), .SDcols = cols]
-# melt(vaccs_country, id.vars = c("country", "date"), measure.vars = c("first_vaccination", "second_vaccination")) %>%
-#   ggplot(.) + geom_line(aes(date, value, color = variable))+scale_color_manual(values=c("steelblue4", "steelblue2"))+
-#   theme(legend.position = "bottom", legend.title = element_blank())+ylab("vaccinated in %")
-# ggsave("~/plot_vaccinations_ger.pdf", width = 7, height = 4)
-
 
 # delay vaccinations 14 days
 vaccs[, first_vaccination := shift(first_vaccination, 14), by = country]
@@ -180,8 +170,7 @@ data[, second_vaccination := nafill(second_vaccination, fill = 0)]
 
 hh <- fread("https://opendata.ecdc.europa.eu/covid19/hospitalicuadmissionrates/csv/data.csv")
 hh <- hh[country %in% countries][indicator %in% c("Daily hospital occupancy", "Daily ICU occupancy")][, .(country, indicator, date, value)]
-
-ggplot(hh) + geom_line(aes(date, value, color=indicator))+facet_wrap(~country, scales = "free")
+#ggplot(hh) + geom_line(aes(date, value, color=indicator))+facet_wrap(~country, scales = "free")
 
 hh[, indicator := ifelse(indicator == "Daily hospital occupancy", "H_t", "Hicu_t")]
 
@@ -207,12 +196,12 @@ hh <- rbindlist(list(hh, h_UK), use.names = T)
 # Switzerland: not yet used
 # h_CH <- fread("https://www.covid19.admin.ch/api/data/20211006-cnzsfrjp/downloads/sources-csv.zip")
 
-ggplot(hh) + 
-  geom_line(aes(date, H_t),color = "blue")+
-  geom_line(aes(date, Hicu_t), color = "red")+
-  facet_wrap(~country, scales = "free")
+# ggplot(hh) + 
+  # geom_line(aes(date, H_t),color = "blue")+
+  # geom_line(aes(date, Hicu_t), color = "red")+
+  # facet_wrap(~country, scales = "free")
 
-
+hh[, date := as.Date(date)]
 data <- merge(data, hh, all = T)
 
 
@@ -241,16 +230,7 @@ plot_comparison <- function(cc, sD=20, sH=1){
     theme(axis.ticks.y.right = element_line(color = "steelblue4")) #+ facet_wrap(facets = "country", scales = "free_y", ncol = 1)
 }
 
-
-
-plot_comparison("Spain")
-
-# save plots
-# ccs <- data$country %>% unique()
-# pdf("~/Desktop/comparison_all_countries.pdf", width = 7, height = 4)
-# lapply(ccs, plot_comparison)
-# dev.off()
-
+# plot_comparison("Spain")
 
 
 ################################
@@ -259,7 +239,7 @@ data <- data[date <= "2021-10-31"]
 
 
 ##################################
-# delete outlier
+# delete potential outliers
 
 # thresholds
 # 2.5 
@@ -269,7 +249,7 @@ data <- data[date <= "2021-10-31"]
 # Specific case: peak in Spain v 2020-06-18
 data[country == "Spain" & date == "2020-06-19", D_t := 0]
 
-# smooth all other data points which meet the criteria with 25 50 25 %
+# identify outliers by discrepancy to smoothed version
 data[, smooth_cases := as.vector(stats::filter(repC_t, rep(1/7, 7))), by = country]
 data[, smooth_deaths := as.vector(stats::filter(D_t, rep(1/7, 7))), by = country]
 
@@ -293,7 +273,7 @@ ii <- which(ii)
 
 
 # function to reduce extreme outlieres
-# # gives 50% of its value to its neighbors (i.e. 25% each)
+# # gives 50% of its value to its neighbors (i.e. 25% each, therefore 25,50,25 for t-1,t,t+1)
 smooth_value_cases <- function(index, d = data){
   value <- d[index, repC_t]
   value_i <- round(value * 0.5)
@@ -342,11 +322,10 @@ data[, c("smooth_cases", "smooth_deaths", "abs_deviation_cases",
 
 
 
-ggplot(data)+
-  geom_line(aes(date, D_t*20), color = "darkred")+
-  geom_line(aes(date, repC_t),color = "darkblue")+
-  facet_wrap(~country, scales = "free")
-
+# ggplot(data)+
+  # geom_line(aes(date, D_t*20), color = "darkred")+
+  # geom_line(aes(date, repC_t),color = "darkblue")+
+  # facet_wrap(~country, scales = "free")
 
 
 
@@ -375,9 +354,9 @@ data <- data_tmp
 data[,cum_deaths := NULL]
 
 
-ggplot(data) + geom_line(aes(date, repC_t, color = country))+
-  geom_line(aes(date, alpha*100000, color = country))+
-  geom_line(aes(date, delta*100000, color = country), linetype = "dashed")
+# ggplot(data) + geom_line(aes(date, repC_t, color = country))+
+  # geom_line(aes(date, alpha*100000, color = country))+
+  # geom_line(aes(date, delta*100000, color = country), linetype = "dashed")
 
 
 data[, first(date), by = country]
@@ -387,7 +366,7 @@ data[, first(date), by = country]
 ############# assign piD
 ####################################################
 
-pi_D <- fread("../data/ifr_t_m_shifted.csv")
+pi_D <- fread("../data/ifr/ifr_t_m_shifted.csv")
 pi_D[country == "United Kingdom", country := "UnitedKingdom"]
 pi_D[, date := as.Date(date)]
 pi_D[, ifr_t_m_voc_adjusted := NULL]
@@ -412,20 +391,6 @@ ints$CountryName %>% unique %>% length
 ints <- ints[RegionName == ""]
 
 
-# setting 1
-# workplacesClosed, smallGatherings, mediumGatherings, contactsTraced, 
-# lockdown, secondLockdown, schoolsClosed, secondSchoolsclosed
-
-
-# smallGatherings, mediumGatherings, contactsTraced, lockdown, secondLockdown,
-# schoolsClosed, secondSchoolsclosed)
-
-# setting 3
-# generalBehavioralChanges, smallGatherings, mediumGatherings, contactsTraced, lockdown, secondLockdown, schoolsClosed
-
-
-
-
 ################ define interventions
 ints[, date := as.Date(as.character(Date), format = "%Y%m%d")]
 cols_setting <- names(ints)[c(1,62,7:20,33)]
@@ -440,65 +405,21 @@ interventions_data <- copy(ints)
 interventions_data[, closingSchools := nafill(as.numeric(`C1_School closing` >= 2 & C1_Flag==1), "locf")]
 
 
-ggplot(interventions_data)+
-  geom_line(aes(date, `C1_School closing`))+
-  geom_line(aes(date, C1_Flag), color=2)+
-  geom_line(aes(date, closingSchools+0.1), color=3)+
-  facet_wrap(~CountryName)
-
-
-################################################################################
-# closingWorkplaces
-
-# no workplace variable, but could be something like this:
-# interventions_data[, closingWorkplaces := as.numeric(`C2_Workplace closing` >= 2 & C2_Flag==1)]
-
-
-
-################################################################################
-# cancelPublicEvents
-# should be incorporated in restricted gatherings
-# interventions_data[, cancelPublicEvents := nafill(as.numeric(`C3_Cancel public events` == 2 & C3_Flag==1), "locf")]
-# 
-# 
-# ggplot(interventions_data)+
-#   geom_line(aes(date, `C3_Cancel public events`), color="darkblue")+
-#   geom_line(aes(date, C3_Flag), color="steelblue")+
-#   geom_line(aes(date, cancelPublicEvents+0.1), color=1)+
-#   facet_wrap(~CountryName)
-
-
-
 ################################################################################
 # restrictGatherings
 interventions_data[, restrictGatherings := nafill(as.numeric(`C4_Restrictions on gatherings` == 4 & C4_Flag==1),"locf")]
 
 
-ggplot(interventions_data)+
-  geom_line(aes(date, `C4_Restrictions on gatherings`), color="darkblue")+
-  geom_line(aes(date, C4_Flag), color="steelblue")+
-  geom_line(aes(date, restrictGatherings+0.1), color=1)+
-  facet_wrap(~CountryName)
-
-
-################################################################################
-# restrictPublicTransport
-
-# not in the model, could be like this:
-# interventions_data[, restrictPublicTransport := as.numeric(`C5_Close public transport` >= 1 & C5_Flag==1)]
-# 
-# 
 # ggplot(interventions_data)+
-#   geom_line(aes(date, `C5_Close public transport`), color="darkblue")+
-#   geom_line(aes(date, C5_Flag), color="steelblue")+
-#   geom_line(aes(date, restrictPublicTransport+0.1), color=1)+
+#   geom_line(aes(date, `C4_Restrictions on gatherings`), color="darkblue")+
+#   geom_line(aes(date, C4_Flag), color="steelblue")+
+#   geom_line(aes(date, restrictGatherings+0.1), color=1)+
 #   facet_wrap(~CountryName)
 
 
 
 ################################################################################
 # lockdown
-
 
 interventions_data[, lockdown := nafill(as.numeric(`C6_Stay at home requirements` >= 2 & C6_Flag==1), "locf")]
 # adpat lockdown for Germany 
@@ -530,16 +451,13 @@ for (cc in start_dates$CountryName) {
 }
 
 
-ggplot(interventions_data)+
-  geom_line(aes(date, generalBehavioralChanges))+
-  facet_wrap(~CountryName)
+# ggplot(interventions_data)+
+#   geom_line(aes(date, generalBehavioralChanges))+
+#   facet_wrap(~CountryName)
 
 
 ################################################################################
 # subsequentLockdown
-  
-
-
 define_subsequent_intervention <- function(df, country_sel, intervention){
   sec_int <- paste0("subsequent",stringr::str_to_title(intervention))
   if (sum((df[CountryName == country_sel][[intervention]] %>% diff()) != 0) >= 3){
@@ -564,24 +482,24 @@ for (cc in unique(interventions_data$CountryName)){
 interventions_data[is.na(subsequentLockdown), subsequentLockdown := 0]
 
 
-interventions_data %>% ggplot()+
-  geom_line(aes(date, subsequentLockdown+0.1), color=2)+ 
-  geom_line(aes(date, lockdown), color = 1)+ 
-  facet_wrap(~CountryName)
+# interventions_data %>% ggplot()+
+#   geom_line(aes(date, subsequentLockdown+0.1), color=2)+ 
+#   geom_line(aes(date, lockdown), color = 1)+ 
+#   facet_wrap(~CountryName)
 
 
 
 
 
 # plot NPIs
-ggplot(interventions_data)+ 
-  geom_line(aes(date, closingSchools+0.01), color="red")+
-  # geom_line(aes(date, cancelPublicEvents+0.02), color="blue")+
-  geom_line(aes(date, restrictGatherings+0.03), color="green")+
-  geom_line(aes(date, lockdown+0.04), color="yellow")+
-  geom_line(aes(date, subsequentLockdown+0.06), color="orange")+
-  geom_line(aes(date, generalBehavioralChanges+0.05), color="black")+
-  facet_wrap(~CountryName)
+# ggplot(interventions_data)+ 
+#   geom_line(aes(date, closingSchools+0.01), color="red")+
+#   # geom_line(aes(date, cancelPublicEvents+0.02), color="blue")+
+#   geom_line(aes(date, restrictGatherings+0.03), color="green")+
+#   geom_line(aes(date, lockdown+0.04), color="yellow")+
+#   geom_line(aes(date, subsequentLockdown+0.06), color="orange")+
+#   geom_line(aes(date, generalBehavioralChanges+0.05), color="black")+
+#   facet_wrap(~CountryName)
 
 
 # delete old names
@@ -596,16 +514,17 @@ interventions_data[CountryName == "United Kingdom", CountryName := "UnitedKingdo
 setnames(interventions_data, "CountryName", "country")
 
 
-tmp_npis <- melt(interventions_data, id.vars = c("country", "date"))
-match_table <- tmp_npis$variable %>% unique()
-tmp_npis[, value := value*match(variable, match_table)]
-tmp_npis[, value := ifelse(value == 0, NA, value)]
+# plot it
+# tmp_npis <- melt(interventions_data, id.vars = c("country", "date"))
+# match_table <- tmp_npis$variable %>% unique()
+# tmp_npis[, value := value*match(variable, match_table)]
+# tmp_npis[, value := ifelse(value == 0, NA, value)]
 
-ggplot(tmp_npis, aes(date, value, color = variable))+
-  geom_line()+
-  facet_wrap(~country) +
-  theme(axis.text.x = element_text(angle=45, vjust=0.5))+
-  scale_y_continuous(labels = rep("", 5))
+# ggplot(tmp_npis, aes(date, value, color = variable))+
+#   geom_line()+
+#   facet_wrap(~country) +
+#   theme(axis.text.x = element_text(angle=45, vjust=0.5))+
+#   scale_y_continuous(labels = rep("", 5))
   # + scale_y_continuous(labels = match_table)
   
 
@@ -637,27 +556,6 @@ define_variable(data, "winter", c(12,1,2))
 define_variable(data, "spring", c(3,4,5))
 define_variable(data, "summer", c(6,7,8))
 define_variable(data, "autumn", c(9,10,11))
-
-
-
-
-source("plot_time_series.R")
-
-
-plot_time_series(
-  dataset = data[country == "Germany"],
-  interventions = interventions_data %>% names %>% extract(-(1:2)),
-  scale_deaths = 20,
-  shifttext = 2000
-)
-plot_time_series(
-  dataset = data[country == "France"],
-  interventions = interventions_data %>% names %>% extract(-(1:2)),
-  scale_deaths = 20,
-  shifttext = 3000,
-  shiftstart = 8000
-)
-
 
 
 

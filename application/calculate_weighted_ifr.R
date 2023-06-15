@@ -66,12 +66,7 @@ data_vaccs_all_countries <- data_vaccs_all_countries[location %in% countries & d
 
 # check where first vaccination is zero
 data_vaccs_all_countries[, lapply(.SD, function(x) return(x[1:3])), .SDcols = c("people_vaccinated", "people_fully_vaccinated", "date"), by = location] 
-# for spain, netherlands  and UK there are NAs...
-# data_vaccs_all_countries[location == "Netherlands"][1, 3] <- 0
-# data_vaccs_all_countries[location == "Spain"][1, 3] <- 0
-# data_vaccs_all_countries[location == " United Kingdom"][1, 3] <- 0
 
-# new....
 foo <- function(people_vaccinated){
   print(people_vaccinated[1])
   if (is.na(people_vaccinated[1])){
@@ -100,7 +95,6 @@ calc_vaccinations_country <- function(country, vaccinations_france, data_vaccs_a
   return(merged_data[, .(date, age_group, sum_first_vacc, sum_second_vacc)])
 }
 
-# vaccinations_age_specific <- lapply(c("Denmark", "France","Italy","Germany", "Spain"), calc_vaccinations_country, 
 vaccinations_age_specific <- lapply(countries, calc_vaccinations_country, 
        vaccinations_france=vaccinations_france, data_vaccs_all_countries=data_vaccs_all_countries) %>% 
   set_names(countries)
@@ -138,8 +132,6 @@ tmp[, .(sum_first_vacc = sum(sum_first_vacc), sum_second_vacc = sum(sum_second_v
 
 
 ggplot(tmp[, sum(sum_first_vacc), by = c("date","age_group_new")]) + geom_line(aes(date, V1, color = age_group_new))
-
-
 
 
 
@@ -206,8 +198,6 @@ vaccinations_age_specific_new[country == "Germany"] %>%
 
 
 
-
-##
 ## add info about variant of concern to inflate ifr 
 
 
@@ -216,7 +206,7 @@ vocs[country == "UnitedKingdom", country := "United Kingdom"]
 
 
 # voc time series starts much earlier, we need all infos about alpha and delta
-# therefore expand vaccinations_age_specific_new bakc to a dat ewhere alpha is 0
+# therefore expand vaccinations_age_specific_new back to a date where alpha is 0
 vocs[proportion_alpha != 0, date] %>% min
 vaccinations_age_specific_new[, lapply(.SD, first), by = c("country", "age_group_new")]
 
@@ -299,7 +289,7 @@ aggregate_groups <- function(d){
 }
 
 # need specific vector:
-# problems occur at uk and czechia
+# problems occur at uk (splitted in sub-locations) and czechia (name)
 countries_tmp <- c(countries, c("England", "Northern%20Ireland", "Scotland", "Wales", "Czech%20Republic"))
 countries_tmp <- countries_tmp[! countries_tmp == "Czechia"]
 countries_tmp <- countries_tmp[! countries_tmp == "United Kingdom"]
@@ -330,7 +320,6 @@ populations
 ##############################
 # now reweight the ifr with the vaccinations in each age strata
 ##############################
-
 
 # bring population information together with vaccination infos
 vaccinations_age_specific_new <- merge(vaccinations_age_specific_new, populations, all.x = T, by = c("country", "age_group_new"))
@@ -382,7 +371,6 @@ ggplot(vaccinations_age_specific_new)+
   geom_line(aes(date, ifr_age, color = age_group_new))+ # without adjustment
   facet_wrap(~country)
 
-# vaccinations_age_specific_new[country == "Spain" & age_group_new == "0-34", ifr_t_m]
 
 # sum ifrtm together to get the true ifrtm
 ifr_t_m_all_countries <- vaccinations_age_specific_new[, .(ifr_t_m = sum(ifr_t_m)), by = c("country", "date")]
@@ -411,14 +399,12 @@ egg::ggarrange(g1,g2,g3,ncol = 1)
 ifr_t_m_all_countries
 ifr_t_m_all_countries_new
 ifr_t_m_all_countries_long <- lapply(unique(ifr_t_m_all_countries$country), function(cc){
-  # tmp <- data.table(country = cc, date = seq.Date(as.Date("2020-02-01"), as.Date("2021-05-05"), by = "day"))
   tmp <- data.table(country = cc, date = seq.Date(as.Date("2020-01-01"), ifr_t_m_all_countries$date %>% max, by = "day"))
   tmp <- merge(tmp, ifr_t_m_all_countries[country == cc], all.x = T)
   tmp[, ifr_t_m := nafill(ifr_t_m, type = "nocb")]
 }) %>% rbindlist()
 
 ifr_t_m_all_countries_long_new <- lapply(unique(ifr_t_m_all_countries_new$country), function(cc){
-  # tmp <- data.table(country = cc, date = seq.Date(as.Date("2020-02-01"), as.Date("2021-05-05"), by = "day"))
   tmp <- data.table(country = cc, date = seq.Date(as.Date("2020-01-01"), ifr_t_m_all_countries_new$date %>% max, by = "day"))
   tmp <- merge(tmp, ifr_t_m_all_countries_new[country == cc], all.x = T)
   tmp[, ifr_t_m_voc_adjusted := nafill(ifr_t_m_voc_adjusted, type = "nocb")]

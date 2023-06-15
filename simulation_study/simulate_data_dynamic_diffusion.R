@@ -4,7 +4,7 @@
 ###############################################################################
 
 PATH_DATA = "../data/"
-N_CORES <- 5 # the number of used cores to generate data. Simulation time is not 
+N_CORES <- 50 # the number of used cores to generate data. Simulation time is not 
              # THAT long but can save a view minutes if N_DATASETS is high
 
 ### libraries
@@ -25,7 +25,7 @@ N_DATASETS <- 100
 N_COUNTRY <- 10
 N_DAYS <- 600
 n_strata <- 4 # number of different age groups in population
-POPULATION <- 100000000 # arbitrary countries, can be the same over all countries - in each stratum
+POPULATION <- 100000000
 POPULATION <- rep(POPULATION/n_strata, n_strata)
 
 
@@ -43,7 +43,7 @@ mean_tau <- 10
 sd_tau <- 2
 
 
-### overdispersion negative binomial distributions, 1000 is rather small and gives stability for the simulation
+### overdispersion negative binomial distributions, 1000 seens to give stability in the simulation
 sapply(c("inf", "dea", "rep", "hos", "icu"), function(x){
   name <- paste0("phi_", x)
   assign(name, 1000, envir = .GlobalEnv)
@@ -159,13 +159,10 @@ piHicu <- sweep(scale_factor, MARGIN=2, piHicu, `*`)
 
 piH_overall_mean <- rowMeans(piH)
 piHicu_overall_mean <- rowMeans(piHicu)
-# matplot(piH)
-# lines(1:length(piH_overall_mean), piH_overall_mean)
 
 
 
 ### rhos aka reporting ratio
-### make only 5 periods. This helps with the sampling time in the algorithm, but does not affect results
 rhos <- 1/5:1
 
 
@@ -252,12 +249,6 @@ cppFunction(
   return res;
 }')
 
-# short code to test
-# xxx <- cbind(c(1,1,1), c(2,2,2), c(100,100,100), c(10,10,10))
-# ppp <- rep(1, 4)
-# calc_renewal_diffusion_cpp(3, xxx, rep(1,5), ppp, 10000, c(1,0))  # standard without diffusion to other groups
-# calc_renewal_diffusion_cpp(3, xxx, rep(1,5), ppp, 10000, c(4,0.2))  # with diffusion
-
 
 
 ## define sigmoid function which defines the probability if NPI k gets active
@@ -291,14 +282,7 @@ bb3 <- 0.0004 # NPI3
 bb4 <- 0.0003 # NPI4
 bb5 <- 0.0001 # NPI5
 
-# viz sigmoids to get an idea of the probs
-# grid <- 0:20000
-# plot(grid, sigmoid(grid, bb0, bb1), type = "l", ylim=c(0,1))
-# lines(grid, sigmoid(grid, bb0, bb2), type = "l", col=2)
-# lines(grid, sigmoid(grid, bb0, bb3), type = "l", col=3)
-# lines(grid, sigmoid(grid, bb0, bb4), type = "l", col=4)
-# lines(grid, sigmoid(grid, bb0, bb5), type = "l", col=5)
-
+# viz in other script of simulation
 
 
 ### Define function to simulate data
@@ -339,7 +323,7 @@ simulate_data_country <- function(seed=321, diffusion=F){
     proportion_alpha*R0*beta_alpha + 
     proportion_delta*R0*beta_delta
 
-  ### sample 1st value, i.e. index cases from poisson with rate tau
+  ### sample 1st value, i.e. index cases from nbinom with rate tau
   I_1 <- rnbinom(n_strata, mu=tau, size=phi_inf)
 
   I_t <- matrix(-1, N_DAYS, n_strata)
@@ -358,7 +342,7 @@ simulate_data_country <- function(seed=321, diffusion=F){
   cfull_t_vec[1,] <- 1
   
   #### generate infections dynamically
-  # at each time point t, calculate a probability whether NPI_k gets online
+  # at each time point t, calculate a probability whether NPI_k gets active 
   
   # assign states of NPIs
   state_NPI1 <- rep(F, N_DAYS)
@@ -367,18 +351,10 @@ simulate_data_country <- function(seed=321, diffusion=F){
   state_NPI4 <- rep(F, N_DAYS)
   state_NPI5 <- rep(F, N_DAYS)
   
-  # NPI1 gets active after 30 days for the rest of the pandemic
-  # state_NPI1[31:N_DAYS] <- T
   
   # calculate the first Ct, loop starts at t=2, need decimals and Ct[1]
   Sumut <-  I_t[1, ] * Xi_C[1]
   decimals <- Sumut-floor(Sumut) # 4x1
-  
-  # if(decimals<0.5){
-  #   decimals_last_day <- decimals
-  # } else{
-  #   decimals_last_day <- decimals-1
-  # }
   
   decimals_last_day <- ifelse(decimals<0.5, decimals, decimals-1)
   C_t[1, ] <- round(Sumut)
@@ -388,7 +364,7 @@ simulate_data_country <- function(seed=321, diffusion=F){
     # cat("-")
     
     ### check whether NPI_k gets active at t
-    # if NPI gets active it stays active for 60 to 120 days
+    # if NPI gets active it stays active for a random number of days between 60 to 120 days
     for (npi in 1:5) {
       # paste("npi:", npi) %>% print
       NPI <- paste0("state_NPI",npi)
@@ -439,14 +415,6 @@ simulate_data_country <- function(seed=321, diffusion=F){
     
     # given final Rt, finally calculate I_t and Hicu_t
     
-    ### calc I_t
-    # slow version
-    # sumut <- 0
-    # for (u in 1:(t-1)) {
-    #   sumut <- sumut + I_t[u] * gamma[t-u+1]
-    # }
-    # I_t[t] <- rnbinom(1, mu = sumut*Rt, size = phi_inf)
-    # I_t[t,] <- calc_one_t_cpp(t, I_t[1:t, ], gamma, Rt, phi_inf)
     if (any(Rt < 0)) {
       browser()
     }
@@ -455,7 +423,6 @@ simulate_data_country <- function(seed=321, diffusion=F){
     if (any(is.na(I_t[t,]))) {
       browser()
     }
-    # print("test whether the comment version gives exctly the same results!!!, Maybe add a t-1 in the cpp call")
     
     #### generate Ct
   
@@ -465,21 +432,8 @@ simulate_data_country <- function(seed=321, diffusion=F){
     }
     decimals <- Sumut-floor(Sumut)
     decimals_last_day <- ifelse(decimals<0.5, decimals, decimals-1)
-    # if(decimals<0.5){
-    #   decimals_last_day <- decimals
-    # } else{
-    #   decimals_last_day <- decimals-1
-    # }
     C_t[t,] <- round(Sumut)
     
-    ### calc Hicu_t
-    #### generate Hicut
-    # slow version
-    # Sumut <- 0
-    # for(u in 1:t){
-    #   Sumut <- Sumut + C_t[u] * Xi_Hicu[t-u+1]
-    # }
-    # Hicu_t[t] <- rnbinom(1, mu = Sumut*piHicu[t], size = phi_icu)
     Hicu_t[t, ] <- calc_one_t_cpp(t, C_t, Xi_Hicu, piHicu[t, ], phi_icu) # Ct is longer, but only the first t values should be used, nice sanity check
   }
   
@@ -514,24 +468,6 @@ simulate_data_country <- function(seed=321, diffusion=F){
   data[, paste0("cf_full_", 1:n_strata) := lapply(seq_len(ncol(cfull_t_vec)), function(i) cfull_t_vec[,i])]
   data[, cf_full := rowSums(cfull_t_vec)]
   
-  # data[, cf_full := cfull_t_vec]
-  # data[, I_t := I_t]
-  # data[, C_t := C_t]
-  # data[, Hicu_t := Hicu_t]
-  # 
-  # data[, R_t := R_t_vec]
-  # data[, cf1 := c1_t_vec]
-  # data[, cf2 := c2_t_vec]
-  # data[, cf_full := cfull_t_vec]
-  # 
-  # just to check whether the simulation is doing some reasonable stuff
-  # layout(1:2)
-  # I_t %>% plot
-  # R_t_vec %>% plot
-  
-  
-  
-  #### generate repCt
   
   # we need the weekdays since the model must know which column to pick from Xi_repC
   data[, weekday := lubridate::wday(date, week_start = 1)]
@@ -551,7 +487,7 @@ simulate_data_country <- function(seed=321, diffusion=F){
     Sumut <- 0
     for(u in 1:t){
       wd <- data$weekday[u]
-      # reporting can be don eon all strata
+      # reporting can be done on all strata - only aggregated data required
       Sumut <- Sumut + data$C_t[u] * Xi_repC[[wd]][t-u+1]
     }
     
@@ -562,59 +498,15 @@ simulate_data_country <- function(seed=321, diffusion=F){
   data[, repC_t := repC_t]
   data[, ErepC_t := ErepC_t]
  
-  #### generate Dt
-  # D_t <- rep(-1, N_DAYS)
-  # 
-  # for(t in 1:N_DAYS){
-  #   Sumut <- 0
-  #   for(u in 1:t){
-  #     Sumut <- Sumut + C_t[u] * Xi_D[t-u+1]
-  #   }
-  #   D_t[t] <- rnbinom(1, mu = Sumut*piD[t], size = phi_dea)
-  # }
-  
   D_t <- partial_conv_cpp(C_t, Xi_D, piD, phi_dea)
   
   data[, paste0("D_t_", 1:n_strata) := lapply(seq_len(ncol(D_t)), function(i) D_t[,i])]
   data[, D_t := rowSums(D_t)]
-  # data[, D_t := D_t]
-  
-    #### generate Ht
-  # H_t <- rep(-1, N_DAYS)
-  # 
-  # for(t in 1:N_DAYS){
-  #   Sumut <- 0
-  #   for(u in 1:t){
-  #     Sumut <- Sumut + C_t[u] * Xi_H[t-u+1]
-  #   }
-  #   H_t[t] <- rnbinom(1, mu = Sumut*piH[t], size = phi_hos)
-  # }
-  
   
   H_t <- partial_conv_cpp(C_t, Xi_H, piH, phi_hos)
   
   data[, paste0("H_t_", 1:n_strata) := lapply(seq_len(ncol(H_t)), function(i) H_t[,i])]
   data[, H_t := rowSums(H_t)]
-  # data[, H_t := H_t]
-  
-  
-  
-  ### add seasonality
-  # NOT REQUIRED IN SIMULATION
-  # define_dummy <- function(x, months){
-  #   return(as.numeric(x %in% months))
-  # }
-  # 
-  # define_variable <- function(d, name, months){
-  #   d[,(name) := define_dummy(month(date), months)]
-  #   return(d)
-  # }
-  # 
-  # define_variable(data, "winter", c(12,1,2))
-  # define_variable(data, "spring", c(3,4,5))
-  # # define_variable(data, "summer", c(6,7,8)) # actually not required
-  # define_variable(data, "autumn", c(9,10,11))
-  # 
   
   # add further required colmuns
   # data[, ifr_t_m := piD]
@@ -648,11 +540,6 @@ g1 <- ggplot(data)+
   geom_line(aes(date, I_t_3), col = "grey60")+
   geom_line(aes(date, I_t_4), col = "grey80")+ 
   geom_line(aes(date, I_t), col = "grey0")
-  # geom_line(aes(date, C_t), col="darkgrey")+
-  # geom_line(aes(date, repC_t), col="darkorange")+
-  # geom_line(aes(date, D_t), col="darkred")+
-  # geom_line(aes(date, Hicu_t), col="darkblue")+
-  # geom_line(aes(date, H_t), col="blue")
 g2 <- ggplot(data)+
   geom_line(aes(date, NPI1),col=2)+
   geom_line(aes(date, NPI2),col=3)+
