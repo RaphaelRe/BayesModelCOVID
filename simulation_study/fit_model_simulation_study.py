@@ -15,6 +15,8 @@ from basics import load_data, load_time_distribution, load_reporting_delay_distr
 
 PATH = os.getcwd()
 NB_DATASETS_BATCH = 50  # the number of datasets in one batch, code uses two batches, therefore batch=50 means 100 datasets
+CORES = NB_DATASETS_BATCH
+
 
 np.random.seed(seed=123)
 
