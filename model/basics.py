@@ -245,7 +245,7 @@ def calculate_correction_factor1_country(infections_country, N, probability_rein
 # correction factor for vaccinated 1
 def calculate_correction_factor2(data_dict, parameter_values):
     correction_factor2 = {country_key: calculate_correction_factor2_country(
-        data_dict[country_key], parameter_values, country_key) for country_key in data_dict.keys()}
+        data_dict[country_key], parameter_values) for country_key in data_dict.keys()}
     return correction_factor2
 
 
