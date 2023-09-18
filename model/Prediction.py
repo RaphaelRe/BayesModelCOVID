@@ -22,9 +22,7 @@ class Prediction:
             self.oos_country = oos_data.country.unique()[0]
             self.nb_days_oos_init = self.data[self.oos_country].shape[0]
             # calculate cf2 only at start
-            self.oos_cf2 = basics.calculate_correction_factor2_country(
-                    self.oos_data, parameter_values,
-                    self.oos_country)
+            self.oos_cf2 = basics.calculate_correction_factor2_country(self.oos_data, parameter_values)
         else:
             self.oos_country = None
 
@@ -48,9 +46,9 @@ class Prediction:
             cf2 = {}
             for country_iter in self.countries:
                 if country_iter == self.oos_country:
-                    cf2[country_iter] = basics.calculate_correction_factor2_country(self.oos_data, parameter_values, country_iter)
+                    cf2[country_iter] = basics.calculate_correction_factor2_country(self.oos_data, parameter_values)
                 else:
-                    cf2[country_iter] = basics.calculate_correction_factor2_country(self.data[country_iter][:(self.future_indices[country_iter][0])], parameter_values, country_iter)
+                    cf2[country_iter] = basics.calculate_correction_factor2_country(self.data[country_iter][:(self.future_indices[country_iter][0])], parameter_values)
                     cf2_mean_diff = np.diff(cf2[country_iter])[-7:].mean()
                     self.correction_factor_2[country_iter] = np.concatenate((cf2[country_iter], np.zeros(nb_futue_values)))
                     for t in self.future_indices[country_iter]:
@@ -128,7 +126,7 @@ class Prediction:
                 if self.model == 'infections':
                     infections = self.infections[country_iter][:,self.i]  # This should be a pointer
                     infections[:(self.future_indices[country_iter][0])] = latent_variables[country_iter]
-                    cf2 = basics.calculate_correction_factor2_country(self.data[country_iter][:(self.future_indices[country_iter][0])], parameter_values, country_iter)[-1]
+                    cf2 = basics.calculate_correction_factor2_country(self.data[country_iter][:(self.future_indices[country_iter][0])], parameter_values)[-1]
                     for t in self.future_indices[country_iter]:
                         cf1 = basics.calculate_correction_factor1_country(infections[:t+1], parameter_values['N_'+country_iter], parameter_values['probability_reinfection'])[t] # here t+1 in infection sis fine because the last value gets thrown away
                         future_value = self.generate_future_value(infections, parameter_values, t, Rt, cf1, cf2)
