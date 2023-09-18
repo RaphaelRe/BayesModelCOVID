@@ -1,7 +1,6 @@
 import numpy as np
 import scipy.stats as stats
 import copy
-
 import update
 
 
@@ -19,10 +18,10 @@ class Parameter:
         self.name = name
         self.target = 0.4
         self.precision = precision[name_parent]
-        self.samples = np.empty(30000)  # 30k notwendig? bessere variante?
+        self.samples = np.empty(30000)  # 30k empty samples - gets overwritten for actual sampling. Should only be large enough for adaptive phases + burnin
 
         if name_parent == 'rho':
-            if 'rho_period' in data.columns:  # data[list(keys)[0]].columns:
+            if 'rho_period' in data.columns:
                 self.samples[0] = start_values['rho_' + country][name]
             else:
                 self.samples[0] = start_values['rho_' + country]
@@ -35,17 +34,17 @@ class Parameter:
         elif name_parent == 'alpha' and len(name.split('_')) == 3:
             m = start_values['alpha_' + name.split('_')[1]]
             sd = start_values['alpha_sd'] * 1.1
-            self.samples[0] = stats.norm.rvs(loc=m, scale=sd)  # ziehe aus einer Normalverteilung als start wert
+            self.samples[0] = stats.norm.rvs(loc=m, scale=sd)  # Gaussian initial values
 
         else:
             self.samples[0] = start_values[name]
 
         self.i = 0
-        self.acceptance = np.empty(30000, dtype=np.bool)
+        self.acceptance = np.empty(30000, dtype=bool)
         self.proposal_sd = proposal_sd[name_parent]
 
         self.prior_parameters = prior_parameters[name_parent]
-        self.prior_ratio = lambda theta_cand: update.priors[name_parent](self.samples[self.i], theta_cand, self.prior_parameters, informative_priors)  # prior parameters könnte für jeden parameter aus einen ParameterVektor auch einzeln Informationen auslsesen. Dann müsste da einfach prior_parameters[name] stehen. Ist bis jetzt aber nicht vorgesehen
+        self.prior_ratio = lambda theta_cand: update.priors[name_parent](self.samples[self.i], theta_cand, self.prior_parameters, informative_priors)
 
         self.propose_value = lambda: update.proposals[name_parent](self.samples[self.i], self.proposal_sd)
 
@@ -70,11 +69,10 @@ class Parameter:
         self.update = lambda current_values, latent_variable: update.parameter_update(self, current_values, latent_variable, name_parent)
 
 
-    def adapt_proposal(self, nb_iterations, phase):  # phase = aktuelle phase des adaptive_algos, nb_iterations = azahl an iteration in jeder adaptive_phase, insgesamt 100 phases per default
+    def adapt_proposal(self, nb_iterations, phase):
         acceptance_rate = np.mean(self.acceptance[phase * nb_iterations:(phase + 1) * nb_iterations - 1])
         diff = acceptance_rate - self.target
         change = abs(diff) > 0.02
-
         sign = np.sign(diff)
         self.proposal_sd *= (1 + 0.1 * sign * change)
         print(self.name)
@@ -82,7 +80,7 @@ class Parameter:
 
 
     def write_samples(self, path_results, thin):
-        if (isinstance(self.name, np.integer)):  # for the case where the
+        if (isinstance(self.name, np.integer)):
             file_name = path_results + 'results_' + 'rho_' + self.country + str(self.name) + ".txt"
 
         elif (isinstance(self, PriorParameter)):
@@ -139,7 +137,7 @@ class Parameter:
         i = self.i
         statistics['median'] = round(np.median(self.samples[:i]), self.precision)
         statistics['mean'] = round(np.mean(self.samples[:i]), self.precision)
-        statistics['IC_2.5'] = round(np.percentile(self.samples[:i], 2.5), self.precision)  # precision ist anzahl an digits nach dem komma
+        statistics['IC_2.5'] = round(np.percentile(self.samples[:i], 2.5), self.precision)
         statistics['IC_97.5'] = round(np.percentile(self.samples[:i], 97.5), self.precision)
         statistics['acceptance'] = round(np.mean(self.acceptance[self.i]), 4)
         return(statistics)
@@ -243,13 +241,13 @@ class ParameterVector:
         if name_parent in ['beta', 'betaD']:
             name_parent = name
 
-        hierarchical_alpha = isinstance(keys, dict)  # checkt ob er in der ersten ebene von alpha ist
+        hierarchical_alpha = isinstance(keys, dict)  # checkt whether the algo is in the first level of the nested structure of alpha
         name_intervention = None
         if hierarchical_alpha:
             keys_country = keys['countries']
             keys = keys['interventions']
         if name == 'alpha':
-            data = {alpha_key: data for alpha_key in keys}  # wird gebraucht,da parameterVector ein data_dict erwartet - die Lösung ist nicht perfekt aber besser als die Alternativen
+            data = {alpha_key: data for alpha_key in keys}  # necessary as parameterVector expects data dict - not the best solution but atm fine
             country = {alpha_key: 'all' for alpha_key in keys}
         else:
             country = {country_key: country_key for country_key in keys}
@@ -258,10 +256,9 @@ class ParameterVector:
         self.parameters = {}
         self.prior_parameters = {}
 
-        # this condition is only for parameter vectors with priors, else the
-        # prior parameters are FixedParameters
+        # this condition is only for parameter vectors with priors, else the prior parameters are FixedParameters
         if (name in ['R0', 'tau']) or name[0:6] == 'alpha_':
-            # init hierarchical alpha prior (new version)
+            # init hierarchical alpha prior
             name_intervention = name.split('_')[-1]
             for parm in prior_parameters[name_parent].keys():
                 self.prior_parameters[parm] = PriorParameter(parm,
@@ -275,20 +272,17 @@ class ParameterVector:
                 prior_parameters[name_parent][parm] = self.prior_parameters[parm].get_current_value()
 
         else:
-            prior_name = name.split('_')[0]  # wird gebraucht wegen der rekursion bei rho (es wird nur der erste teil von zb rho_Austria gebraucht)
+            prior_name = name.split('_')[0]  # necessary for the recursion function call for rho
 
             if prior_name in ['beta', 'betaD']:
                 prior_name = name
 
             for parm in prior_parameters[prior_name].keys():
                 self.prior_parameters[parm] = FixedParameter(parm, prior_parameters[prior_name][parm])
+
             # init alpha, rho priors
-
-
-
         if name == 'rho':
-            # ifelse condition necessary because the should be flexible
-            # concerning the rho_period column
+            # ifelse condition necessary because the should be flexible concerning the rho_period column
             if 'rho_period' in data[list(keys)[0]].columns:
                 for parm in keys:
                     self.parameters[name + '_' + parm] = ParameterVector(name + '_' + parm,
@@ -328,8 +322,7 @@ class ParameterVector:
                                                                      informative_priors=informative_priors)
 
 
-        # # ## The following loop is called by a recursive call of Parameter vector
-        # # ## which is done for rho (parameter vector of parameter vectors)
+        # The following loop is called by a recursive call of Parameter vector which is done for rho (parameter vector of parameter vectors)
         elif name[0:4] == 'rho_':
             # keys is here a list with values defined by data["rho_period"].unique()
             for period in keys:
@@ -340,7 +333,7 @@ class ParameterVector:
                                                     start_values,
                                                     data,  # gets all data of a country
                                                     start=start,
-                                                    name_parent=name_parent,  # self.name[0:3],
+                                                    name_parent=name_parent,
                                                     country=self.name[4:],
                                                     informative_priors=informative_priors,
                                                     reporting_model=True, renewal_model=False
@@ -393,7 +386,7 @@ class ParameterVector:
                                                                start_values,
                                                                data[parm], 
                                                                start=start,
-                                                               name_parent=name_parent,  # self.name,
+                                                               name_parent=name_parent,
                                                                country=country[parm],
                                                                informative_priors=informative_priors,
                                                                reporting_model=reporting_model,

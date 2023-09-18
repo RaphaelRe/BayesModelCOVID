@@ -1,7 +1,5 @@
 import time
 import json
-# import os.path
-# import progressbar as pb
 
 from basics import (split_oos_data, dictionarize_data)
 from LatentVariables import LatentVariables
@@ -55,9 +53,9 @@ class MCMC(object):
             self.oos_data = None
 
         self.epidemic_start = epidemic_start
-        self.model = model_specification['model']  # string - spezifieziert das model
-        self.interventions = model_specification['interventions']  # sting liste - spezifieziert welche interventionen benutzt werden, muss koherent zu den alphas in den start values sein
-        self.hierarchical_interventions = model_specification['hierarchical_interventions']  # logical - definiert ob hierarchisches alpha benutzt wird
+        self.model = model_specification['model']
+        self.interventions = model_specification['interventions']
+        self.hierarchical_interventions = model_specification['hierarchical_interventions']  # logical - definiert whether hierarchisches alpha is used 
 
         self.adapt_reporting_weekend = model_specification['adapt_reporting_weekend']
 
@@ -74,13 +72,12 @@ class MCMC(object):
                                    chain,
                                    informative_priors)
 
-        # some countries dont have all interventions...
+        # some countries dont have all interventions
         for parm_iter in exceptions_intervention:
             split = parm_iter.split('_')
             intervention_tmp = split[1]
             country_tmp = split[2]
             del self.parameters['alpha'].parameters['alpha_' + intervention_tmp].parameters['alpha_' + intervention_tmp + '_' + country_tmp]
-
 
         self.latent_variables =  LatentVariables(self.model, self.data,
                 parameter_values = self.get_current_values(),
@@ -88,7 +85,6 @@ class MCMC(object):
                 proposal_range = proposal_sd['cases'], start = epidemic_start, 
                 fix_latent_variable = fix_latent_variable , adapt_reporting_weekend = self.adapt_reporting_weekend
                 )
-        #self.latent_variables.update_sumut(self.get_current_values())
 
         self.predictions = Prediction(self.model, self.data, nb_future_values, parameter_values=self.get_current_values(),oos_data=self.oos_data)
 
@@ -125,7 +121,7 @@ class MCMC(object):
         print("starting adaptive phase......")
         for phase in range(nb_phases):
             print('Adaptive phase '+ str(phase))
-            for iterations in range(nb_iterations):
+            for _ in range(nb_iterations):
                 self.update_chains()
             self.adapt_proposals(nb_iterations, phase)
 
@@ -135,10 +131,10 @@ class MCMC(object):
         self.reset_values(nb_burnin)
         for i in range(nb_burnin):
             self.update_chains()
-            # pbar.update(i)
             if i > 1 and i % 1000 == 0:
                 print(f'Iteration {i}/{nb_burnin} [BURNIN] finished')
         print('End Burnin-phase')
+
 
     def run_algorithm(self, nb_iterations, thin=1, prediction_interval=300, save_chains=True):
         # check whether the Prediciton object has enough space
@@ -156,11 +152,8 @@ class MCMC(object):
 
             if i > 0 and i % prediction_interval == 0:
                 current_prior_values = {}
-                # for R0:
                 current_prior_values['R0'] = self.parameters['R0'].get_current_prior_value()
-                # for alphas
                 current_prior_values['alpha'] = {alpha_key: self.parameters['alpha'].parameters[alpha_key].get_current_prior_value() for alpha_key in self.parameters['alpha'].parameters.keys()}
-
                 self.predictions.make_predictions(self.get_current_values(),
                                                   self.latent_variables.get_values(),
                                                   current_prior_values

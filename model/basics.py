@@ -33,7 +33,6 @@ def load_reporting_delay_distributions(filename):
 
 
 def get_wday(date):
-    # date = datetime.datetime.strptime(datestr, '%Y-%m-%d')
     weekday = datetime.datetime.weekday(date)
     return(weekday)
 
@@ -107,24 +106,21 @@ def initialize_country_specific_Xi_R(parameter_values, country):
         curr_shape = parameter_values['xi_R'].shape
         raise ValueError(f'% 7 of number of rows in Xi_R must be 1! i.e. n % 7 == 1; currently shape is {curr_shape}')
     result = {}
-    # result['values'] = copy.deepcopy(parameter_values['xi_R']) # OLD VERSION, MAY NOT WORK
-    xi_new = np.copy(parameter_values['xi_R'], order='F')  # new version - should work better, more control about memory allocation order
+    xi_new = np.copy(parameter_values['xi_R'], order='F')
     result['values'] = xi_new
-    # result['values'] = np.copy(parameter_values['xi_R'])#  np array mit ~400x7
-    tmp = result['values'].reshape(-1, order='A')  # only used to define the view. numpy just can create view on slices...trick only works when we get nb % 1, MEW VERSION WITH MEMORY ORDER 'A'
-    # tmp2 = result['values'].reshape(-1, order = 'F') # only used to define the view. numpy just can create view on slices...trick only works when we get nb % 1, OLD VERSION WITH WRONG MEMORY ODER, MAY NOT WORK
+    tmp = result['values'].reshape(-1, order='A')  # only used to define the view. numpy just can create view on slices...trick only works when we get nb %1
     result['view_sat'] = tmp[5::7]
-    result['view_sat'][:] = result['view_sat'] * parameter_values['beta_sat']['beta_sat_' + country]  # vektor der eine view auf alle Samstage der values ist (dimension geht verloren!) 
+    result['view_sat'][:] = result['view_sat'] * parameter_values['beta_sat']['beta_sat_' + country]
     result['view_sun'] = tmp[6::7]
-    result['view_sun'][:] = result['view_sun'] * parameter_values['beta_sun']['beta_sun_' + country]  # vektor der eine view auf alle Sonnatge der values ist (dimension geht verloren!) 
+    result['view_sun'][:] = result['view_sun'] * parameter_values['beta_sun']['beta_sun_' + country]
     result['view_mon'] = tmp[0::7]
-    result['view_mon'][:] = result['view_mon'] * parameter_values['beta_mon']['beta_mon_' + country]  # vektor der eine view auf alle Sonnatge der values ist (dimension geht verloren!) 
+    result['view_mon'][:] = result['view_mon'] * parameter_values['beta_mon']['beta_mon_' + country]
     result['view_tue'] = tmp[1::7]
-    result['view_tue'][:] = result['view_tue'] * parameter_values['beta_tue']['beta_tue_' + country]  # vektor der eine view auf alle Sonnatge der values ist (dimension geht verloren!) 
+    result['view_tue'][:] = result['view_tue'] * parameter_values['beta_tue']['beta_tue_' + country]
     result['view_wed'] = tmp[2::7]
-    result['view_wed'][:] = result['view_wed'] * parameter_values['beta_wed']['beta_wed_' + country]  # vektor der eine view auf alle Sonnatge der values ist (dimension geht verloren!) 
+    result['view_wed'][:] = result['view_wed'] * parameter_values['beta_wed']['beta_wed_' + country]
     result['view_fri'] = tmp[4::7]
-    result['view_fri'][:] = result['view_fri'] * parameter_values['beta_fri']['beta_fri_' + country]  # vektor der eine view auf alle Sonnatge der values ist (dimension geht verloren!) 
+    result['view_fri'][:] = result['view_fri'] * parameter_values['beta_fri']['beta_fri_' + country]
     for j in range(7):
         vals = result['values'][:, j]
         result['values'][:, j] = vals / vals.sum()
@@ -139,21 +135,19 @@ def initialize_country_specific_Xi_D(parameter_values, country):
     result = {}
     xi_new = np.copy(parameter_values['xi_D'], order='F') # new version - should work better, more control about memory allocation order
     result['values'] = xi_new
-    # result['values'] = np.copy(parameter_values['xi_D'])#  np array mit ~400x7
-    tmp = result['values'].reshape(-1, order = 'A') # only used to define the view. numpy just can create view on slices...trick only works when we get nb % 1, MEW VERSION WITH MEMORY ORDER 'A'
-    # tmp2 = result['values'].reshape(-1, order = 'F') # only used to define the view. numpy just can create view on slices...trick only works when we get nb % 1, OLD VERSION WITH WRONG MEMORY ODER, MAY NOT WORK
+    tmp = result['values'].reshape(-1, order = 'A') # only used to define the view. numpy just can create view on slices...trick only works when we get nb %1
     result['view_sat'] = tmp[5::7]
-    result['view_sat'][:] = result['view_sat'] * parameter_values['betaD_sat']['betaD_sat_' + country]  # vektor der eine view auf alle Samstage der values ist (dimension geht verloren!) 
+    result['view_sat'][:] = result['view_sat'] * parameter_values['betaD_sat']['betaD_sat_' + country]
     result['view_sun'] = tmp[6::7]
-    result['view_sun'][:] = result['view_sun'] * parameter_values['betaD_sun']['betaD_sun_' + country]  # vektor der eine view auf alle Sonnatge der values ist (dimension geht verloren!) 
+    result['view_sun'][:] = result['view_sun'] * parameter_values['betaD_sun']['betaD_sun_' + country]
     result['view_mon'] = tmp[0::7]
-    result['view_mon'][:] = result['view_mon'] * parameter_values['betaD_mon']['betaD_mon_' + country]  # vektor der eine view auf alle Sonnatge der values ist (dimension geht verloren!) 
+    result['view_mon'][:] = result['view_mon'] * parameter_values['betaD_mon']['betaD_mon_' + country]
     result['view_tue'] = tmp[1::7]
-    result['view_tue'][:] = result['view_tue'] * parameter_values['betaD_tue']['betaD_tue_' + country]  # vektor der eine view auf alle Sonnatge der values ist (dimension geht verloren!) 
+    result['view_tue'][:] = result['view_tue'] * parameter_values['betaD_tue']['betaD_tue_' + country]
     result['view_wed'] = tmp[2::7]
-    result['view_wed'][:] = result['view_wed'] * parameter_values['betaD_wed']['betaD_wed_' + country]  # vektor der eine view auf alle Sonnatge der values ist (dimension geht verloren!) 
+    result['view_wed'][:] = result['view_wed'] * parameter_values['betaD_wed']['betaD_wed_' + country]
     result['view_fri'] = tmp[4::7]
-    result['view_fri'][:] = result['view_fri'] * parameter_values['betaD_fri']['betaD_fri_' + country]  # vektor der eine view auf alle Sonnatge der values ist (dimension geht verloren!) 
+    result['view_fri'][:] = result['view_fri'] * parameter_values['betaD_fri']['betaD_fri_' + country]
     for j in range(7):
         vals = result['values'][:,j]
         result['values'][:,j] = vals/vals.sum()
@@ -162,35 +156,35 @@ def initialize_country_specific_Xi_D(parameter_values, country):
 
 
 def create_candidate_Xi_R(Xi_R):
-    # expects a country specific Xi_R dict with keys: values, view_sat and view_sun
+    # expects a country specific Xi_R dict with keys: values, view_sat, view_sun, ...
     result = {}
-    result['values'] = copy.deepcopy(Xi_R['values'])  # np array mit ~400x7
+    result['values'] = copy.deepcopy(Xi_R['values'])  # np array mit ~number_day x 7
     tmp = result['values'].reshape(-1, order='F')  # only used to define the view. numpy just can create view on slices...trick only works when we get nb % 1
-    result['view_sat'] = tmp[5::7]  # vektor der eine view auf alle Samstage der values ist (dimension geht verloren!)
-    result['view_sun'] = tmp[6::7]  # "
-    result['view_mon'] = tmp[0::7]  # "
-    result['view_tue'] = tmp[1::7]  # "
-    result['view_wed'] = tmp[2::7]  # "
-    result['view_fri'] = tmp[4::7]  # "
+    result['view_sat'] = tmp[5::7]
+    result['view_sun'] = tmp[6::7]
+    result['view_mon'] = tmp[0::7]
+    result['view_tue'] = tmp[1::7]
+    result['view_wed'] = tmp[2::7]
+    result['view_fri'] = tmp[4::7]
     return result
 
 
 def create_candidate_Xi_D(Xi_D):
-    # expects a country specific Xi_D dict with keys: values, view_sat and view_sun
+    # expects a country specific Xi_D dict with keys: values, view_sat, view_sun,...
     result = {}
-    result['values'] = copy.deepcopy(Xi_D['values'])  # np array mit ~400x7
-    tmp = result['values'].reshape(-1, order='F')  # only used to define the view. numpy just can create view on slices...trick only works when we get nb % 1
-    result['view_sat'] = tmp[5::7]  # vektor der eine view auf alle Samstage der values ist (dimension geht verloren!) 
-    result['view_sun'] = tmp[6::7]  # "
-    result['view_mon'] = tmp[0::7]  # "
-    result['view_tue'] = tmp[1::7]  # "
-    result['view_wed'] = tmp[2::7]  # "
-    result['view_fri'] = tmp[4::7]  # "
+    result['values'] = copy.deepcopy(Xi_D['values'])
+    tmp = result['values'].reshape(-1, order='F')
+    result['view_sat'] = tmp[5::7]
+    result['view_sun'] = tmp[6::7]
+    result['view_mon'] = tmp[0::7]
+    result['view_tue'] = tmp[1::7]
+    result['view_wed'] = tmp[2::7]
+    result['view_fri'] = tmp[4::7]
     return result
 
 
 def adapt_Xi_R(Xi_R, theta_curr, theta_cand, weekday):
-    # here Xi_R is a dict with a np.array(~400 x 7), and 6 views (i.e. teh specific values on sat,sun,etc)
+    # here Xi_R is a dict with a np.array(~days x 7), and 6 views (i.e. teh specific values on sat,sun,etc)
     if weekday == 'sat':
         Xi_R['view_sat'][:] = Xi_R['view_sat'] * theta_cand / theta_curr
     elif weekday == 'sun':
@@ -212,7 +206,7 @@ def adapt_Xi_R(Xi_R, theta_curr, theta_cand, weekday):
 
 
 def adapt_Xi_D(Xi_D, theta_curr, theta_cand, weekday):
-    # here Xi_D is a dict with a np.array(~400 x 7), and 2 views (i.e. teh specific values on sat and sun)
+    # here Xi_D is a dict with a np.array(~days x 7), and 6 views (i.e. teh specific values on sat, sun, ...)
     if weekday == 'sat':
         Xi_D['view_sat'][:] = Xi_D['view_sat']*theta_cand/theta_curr
     elif weekday == 'sun':
@@ -233,7 +227,7 @@ def adapt_Xi_D(Xi_D, theta_curr, theta_cand, weekday):
     return Xi_D
 
 
-def calculate_correction_factor1(infections, parameter_values):  # infections ist ein dict das für jedes Land die infections gibt
+def calculate_correction_factor1(infections, parameter_values):
     correction_factors1 = {country_key: calculate_correction_factor1_country(
         infections[country_key], parameter_values['N_' + country_key], parameter_values['probability_reinfection']) for country_key in infections}
     return correction_factors1
@@ -243,32 +237,26 @@ def calculate_correction_factor1(infections, parameter_values):  # infections is
 @jit(nopython=True)
 def calculate_correction_factor1_country(infections_country, N, probability_reinfection):
     cf_unshifted = np.cumsum(infections_country) / N * (1 - probability_reinfection)
-    # ALternative which ensures values <= 1, Dont know whether this can affect something else...
-    # cf_unshifted = np.minimum(np.cumsum(infections_country),N)/N * (1 - probability_reinfection)
-
-    # shift by one day because the sum runs only until th eprevious day
+    # shift by one day because the sum runs only until the previous day
     correction_factor1 = np.concatenate((np.array([0]), cf_unshifted[:-1]))
     return correction_factor1
 
 
-# correction factor für die bereits geimpften
+# correction factor for vaccinated 1
 def calculate_correction_factor2(data_dict, parameter_values):
     correction_factor2 = {country_key: calculate_correction_factor2_country(
         data_dict[country_key], parameter_values, country_key) for country_key in data_dict.keys()}
     return correction_factor2
 
 
-# correction factor für impfungen
-def calculate_correction_factor2_country(data_country, parameter_values, country):
-    # N = parameter_values['N_' + country]
+# correction factor for vaccinated 2
+def calculate_correction_factor2_country(data_country, parameter_values):
     cf1 = parameter_values['correction_first_vaccination']
     cf2 = parameter_values['correction_second_vaccination']
-    # correction_factor2 = (np.cumsum(data_country['first_vaccination']) * cf1 + np.cumsum(data_country['second_vaccination']) * cf2) / N
     correction_factor2 = data_country['first_vaccination'] * cf1 + data_country['second_vaccination'] * cf2
     return correction_factor2.values
 
 
-######
 # only required for initialization of Rt
 def calculate_Rt(parameter_values, data_dict, lv=None):
     Rt = {country_key: calculate_Rt_country(parameter_values,
@@ -279,12 +267,7 @@ def calculate_Rt(parameter_values, data_dict, lv=None):
 # only required for initialization of Rt
 def calculate_Rt_country(parameter_values, data, country, lv=None):
     R0 = parameter_values['R0']['R0_' + country]
-    # if 'new_mutant' in data.columns:
     if set(['alpha', 'delta']).issubset(data.columns):
-        # R0_1 = R0
-        # R0_2 = R0*(1+parameter_values['beta_voc'])
-        # prevalence_voc = data.new_mutant.values
-        # R0 = R0_1*(1-prevalence_voc) + R0_2*prevalence_voc
         R0_1 = R0
         R0_alpha = R0 * (1 + parameter_values['beta_alpha'])
         R0_delta = R0 * (1 + parameter_values['beta_delta'])
@@ -294,7 +277,7 @@ def calculate_Rt_country(parameter_values, data, country, lv=None):
 
     intervention_names = [alpha_key[6:] for alpha_key in parameter_values['alpha'].keys()]
     interventions = data[intervention_names]
-    alpha = parameter_values['alpha']  # für das hierarchische Modell müssen wir nur diecountry-speziefischen alphas ziehen
+    alpha = parameter_values['alpha']
 
     hierarchical_interventions = isinstance(alpha['alpha_' + intervention_names[0]], dict)
 
@@ -325,68 +308,51 @@ def adapt_Rt(current_Rt, current_values, candidate_values, parent_name,
     elif parent_name == 'alpha':
         name_split = parameter_name.split('_')
         intervention = name_split[1]
-        hierarchical_interventions = len(name_split) == 3  # check if alpha is hierarchical
+        hierarchical_interventions = len(name_split) == 3  # check whether alpha is hierarchical
         Rt = copy.deepcopy(current_Rt)
 
         if hierarchical_interventions:
             country = name_split[2]
             factor_old = np.exp(-current_values['alpha']['alpha_' + intervention][parameter_name])
             factor_new = np.exp(-candidate_values['alpha']['alpha_' + intervention][parameter_name])
-            line_selection = data[country][intervention] == 1 # np.where?
+            line_selection = data[country][intervention] == 1
             Rt[country][line_selection] = factor_new*current_Rt[country][line_selection]/factor_old
         else:
             factor_old = np.exp(-current_values['alpha'][parameter_name])
             factor_new = np.exp(-candidate_values['alpha'][parameter_name])
             for country_iter in data.keys():
-                line_selection = data[country_iter][intervention] == 1 # np.where?
+                line_selection = data[country_iter][intervention] == 1
                 Rt[country_iter][line_selection] = factor_new*current_Rt[country_iter][line_selection]/factor_old
-    elif parent_name in ['beta_alpha', 'beta_delta']: # old: == 'beta_voc'
+    elif parent_name in ['beta_alpha', 'beta_delta']:
         Rt = copy.deepcopy(current_Rt)
         for country_iter in data.keys():
             prevalence_alpha = data[country_iter].alpha.values
             prevalence_delta = data[country_iter].delta.values
-
-            # factor_old = (1-prevalence_voc) + (1+current_values['beta_voc'])*prevalence_voc
-            # factor_new = (1-prevalence_voc) + (1+candidate_values['beta_voc'])*prevalence_voc
-    
             factor_old = (1-prevalence_alpha-prevalence_delta) + (1+current_values['beta_alpha'])*prevalence_alpha + (1+current_values['beta_delta'])*prevalence_delta
             factor_new = (1-prevalence_alpha-prevalence_delta) + (1+candidate_values['beta_alpha'])*prevalence_alpha + (1+candidate_values['beta_delta'])*prevalence_delta
- 
-        
-
             Rt[country_iter] = factor_new*current_Rt[country_iter]/factor_old
-
     else: 
         Rt = current_Rt
-    #print("\n")
-    #print("================ print basics")
-    #print(Rt)
     return(Rt)
 
 
-# Achtung! Ist wird in der aktuellen Variante benutzt um I_t zu berechnen!!
 def calculate_ECt(sumut, Rt, data, country, parameter_values, start, correction_factor1=None, correction_factor2=None):
     if correction_factor1 is None:
         correction_factor1 = {country_iter: 0 for country_iter in data.country.unique()}
     if correction_factor2 is None:
         correction_factor2 = {country_iter: 0 for country_iter in data.country.unique()}
 
-    if country == 'all':  # für tau und alpha
+    if country == 'all':
         EC_t = np.zeros(data.shape[0])
         countries = data['country'].unique()
         for country_iter in countries:
             sumut_country = sumut[country_iter]
-            # EC_t_country = sumut_country * Rt[country_iter] * (1-correction_factor1[country_iter]-correction_factor2[country_iter])
-            # cf_full = np.maximum(0,(1-correction_factor1[country_iter]-correction_factor2[country_iter]))
             cf_full = 1 - correction_factor1[country_iter] - correction_factor2[country_iter] * (1 - correction_factor1[country_iter])
             EC_t_country = sumut_country * Rt[country_iter] * cf_full
             EC_t_country[0:(start - 1)] = parameter_values['tau']['tau_' + country_iter]
             EC_t[data['country'].values == country_iter] = EC_t_country
-
-    else:  # für cases, berechnet sumut für ein Land
+    else:
         sumut_country = sumut[country]
-        # EC_t = sumut_country * Rt[country] * (1-correction_factor1[country]-correction_factor2[country])
-        # cf_full = np.maximum(0,(1-correction_factor1[country]-correction_factor2[country]))
         cf_full = 1 - correction_factor1[country] - correction_factor2[country] * (1 - correction_factor1[country])
         EC_t = sumut_country * Rt[country] * cf_full
         EC_t[0:(start - 1)] = parameter_values['tau']['tau_' + country]
@@ -394,8 +360,8 @@ def calculate_ECt(sumut, Rt, data, country, parameter_values, start, correction_
     return(EC_t)
 
 
-def calculate_sumut(cases_view, parameter_values, start):  # funktion geht
-    # davon aus, dass es länderspezifische Werte bekommt
+def calculate_sumut(cases_view, parameter_values, start):
+    # assumes country specific values
     sumut = {}
     for country in cases_view:
         sumut_country = np.zeros(cases_view[country].shape)
@@ -405,7 +371,6 @@ def calculate_sumut(cases_view, parameter_values, start):  # funktion geht
                                         gamma=parameter_values['gamma'],
                                         start=start)
         sumut[country] = sumut_country
-
     return(sumut)
 
 
@@ -422,13 +387,8 @@ def calc_sumut_fast(cases, sumut, gamma, start):
 
 
 
-
-
-################################
-# Version mit convolve...ist evtl schneller aber evtl auch ungenauer...
-###############################
+# Version using convolve - faster but less exact
 def calculate_sumut_alternative(cases_view, parameter_values, start):
-    # davon aus, dass es länderspezifische Werte bekommt
     sumut = {}
     for country in cases_view:
         sumut_country = calc_sumut_faster(cases = cases_view[country], 
@@ -485,7 +445,6 @@ def calculate_EDt_fast_weekdays(ED_t, cases, xi_D, pi_D, weekday):
         for u in range(t+1):
             j = weekday[u] # python starts counting at 0, weekdays start at 1
             sum_u_t += cases[u] * xi_D[t-u,j]
-            # sum_u_t += cases[u] * xi_D[t-u] # old
         ED_t[t] = sum_u_t
     ED_t *= pi_D
     return(ED_t)
@@ -495,7 +454,7 @@ def calculate_E_Crt(cases, Xi_R, data, rho):
     weekday = data.weekday.values
     E_Crt = np.zeros(cases.shape)
     E_Crt = calculate_E_Crt_fast(E_Crt, cases = cases, xi_R = Xi_R, weekday = weekday) 
-    E_Crt *= rho # rho is either scalar or a vector with the same length as E_Crt
+    E_Crt *= rho
     return(E_Crt)
 
 
@@ -509,6 +468,7 @@ def calculate_E_Crt_fast(E_Crt, cases, xi_R, weekday):
         E_Crt[t] = sum_u_t
     return(E_Crt)
 
+
 # alternative using built in convolution
 def calculate_EDt_alternative(cases, parameter_values,data):
     if 'improved_treatment' in data.columns:
@@ -521,6 +481,7 @@ def calculate_EDt_alternative(cases, parameter_values,data):
     ED_t = calc_EDt_faster(cases = cases, xi_D = parameter_values['xi_D'],
             pi_D = pi_D, lim=lim)
     return(ED_t)
+
 
 # dont jit this! it is slower when jitted
 def calc_EDt_faster(cases, xi_D, pi_D, lim):
@@ -546,6 +507,8 @@ def calculate_cases(infections, parameter_values): # infections country-wise
     xi_C = parameter_values['xi_C']
     cases = calculate_cases_fast(infections, xi_C)
     return(cases)
+
+
 
 @jit(nopython=True)
 def calculate_cases_fast(infections, xi_C): # infections country-wise
@@ -599,7 +562,6 @@ def convert_params_nbinom(mu, phi):
     Converts mu and overdispersion phi to standard parameters of Negative
     Binomial distribution
     '''
-    # p = mu / (mu + r)
     p = phi / (mu + phi)
     return (phi, p)
 
@@ -630,7 +592,7 @@ def nbinom_alt_rvs(mu, phi):
 
 
 def asymmetric_laplace_log_pdf(x, scale, kappa):
-    # this condition is not necessary since the proposals will always be poitive
+    # this condition is not necessary since the proposals will always be poitive - here for completeness
     # if x < 0:
         # return 0
     return np.log(scale/ (kappa + (kappa** -1))) + (
@@ -644,13 +606,3 @@ def halfT_pdf(x, nu, scale):
     scale=scale**2
     return (gamma((nu+1)/2)/(gamma(nu/2)*np.sqrt(nu*np.pi*scale))*
     (1+(x**2)/(nu*scale))**(-0.5*(nu+1)))
-
-
-###################################################################
-# will only be used in the unit tests to expand older data frames
-# with a weekday columns
-
-# def get_wday(datestr):
-    # date = dt.datetime.strptime(datestr, '%Y-%m-%d')
-    # weekday = dt.datetime.weekday(date)
-    # return weekday +1

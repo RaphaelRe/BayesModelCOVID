@@ -50,9 +50,7 @@ class LatentVariables:
             self.cases = self.initialize_values(data, fix_latent_variable=fix_latent_variable)
             self.cases_view = {country: self.cases[np.min(np.where(data['country'].values == country)):(np.max(np.where(data['country'].values == country)) + 1)] for country in self.countries}
 
-
         if adapt_reporting_weekend:
-            # import pudb;pu.db
             self.Xi_R = {}
             self.Xi_D = {}
             for country_iter in self.countries:
@@ -60,18 +58,17 @@ class LatentVariables:
                 self.Xi_D[country_iter] = basics.initialize_country_specific_Xi_D(parameter_values, country_iter)
 
 
-
-        # block view is a dict which stores pointers on cases for mor cases
+        # block view is a dict which stores pointers on cases for more cases
         # model or infections for infections-model
         self.block_view = {country: self.initialize_blocks(country, nb_blocks) for country in self.countries}
 
-        self.proposal_distribution = proposal_distribution  # brauchen wir das noch??
+        self.proposal_distribution = proposal_distribution
 
         self.proposal_range = {}
         for country in self.countries:
             self.proposal_range[country] = {block: proposal_range for block in self.block_view[country].keys()}
 
-        self.acceptance_cases = {}  # actual this are infections
+        self.acceptance_cases = {}  # actually this are infections
         for country in self.countries:
             self.acceptance_cases[country] = {block: np.empty(30000) for block in self.block_view[country].keys()}
 
@@ -137,11 +134,9 @@ class LatentVariables:
             values['cases_view'] = self.cases_view
             values.update(self.infections_view)
 
-        # if self.adapt_reporting_weekend:
-        if hasattr(self, 'Xi_R'):  # von sabine checken lassen
+        if hasattr(self, 'Xi_R'):
             values['Xi_R'] = self.Xi_R
             values['Xi_D'] = self.Xi_D
-
         return(values)
 
 
@@ -151,7 +146,7 @@ class LatentVariables:
         self.i += 1
 
 
-    def update_cases(self, parameter_values, country, start):  # this should be update_infections in case of model == 'infections'
+    def update_cases(self, parameter_values, country, start):  # this is actually update infections in the case od model == infections
         current_values = self.get_values()
         for block in self.block_view[country].keys():
             block_selection = self.block_view[country][block]
@@ -187,9 +182,7 @@ class LatentVariables:
                     candidate_values[country][block_selection],country, block)
             ratio = ratio_likelihood * ratio_proposals
             accept = (np.random.uniform(0, 1) < ratio)
-            # print(accept)
             values_new = current_values[country][block_selection] + (candidate_values[country][block_selection]-current_values[country][block_selection]) * accept
-#            self.cases_view[country][0:(len(current_values[country])+1)] = values_new
 
             if self.model == 'cases':
                 self.cases_view[country][block_selection] = values_new
@@ -235,9 +228,9 @@ class LatentVariables:
                 ratio = 1
             else:
                 pmf_cand = basics.calculate_pmf_uniform_trunc(lower_curr[selection],
-                        upper_curr[selection]) # probavility to move from current value to candidate value (q(theta_cand|theta_curr))
+                                                              upper_curr[selection]) # probavility to move from current value to candidate value (q(theta_cand|theta_curr))
                 pmf_curr = basics.calculate_pmf_uniform_trunc(lower_cand[selection],
-                        upper_cand[selection]) # probability to move from candidate value to current value (q(theta_curr|theta_cand))
+                                                              upper_cand[selection]) # probability to move from candidate value to current value (q(theta_curr|theta_cand))
                 ratio = np.prod(pmf_curr/pmf_cand)
         return(ratio)
 
@@ -251,9 +244,6 @@ class LatentVariables:
                 change = abs(diff) > 0.02
                 sign = np.sign(diff)
                 self.proposal_range[country][block] *= (1 + 0.1 * sign * change)
-                # with open('proposal_sds_lv' ,'a') as ff:
-                    # ff.write(country + ':' + str(self.proposal_range) + '\n')
-
                 print("Acceptance rate Latent_Variable " + country + ':' + str(round(acceptance_rate, 4)))
 
 
@@ -277,7 +267,6 @@ class LatentVariables:
         """
         Set the state of the Latent variable
         """
-        # set state for infections
         for country in self.countries:
             len_lv = self.infections_view[country].shape[0]
             x = np.loadtxt(f'{path}/{chain}_predictions_infections_{country}.txt')[:len_lv, -1]
@@ -293,9 +282,7 @@ class LatentVariables:
             self.update_sumut(parameter_values, start=self.start)
             self.correction_factor1 = basics.calculate_correction_factor1(self.infections_view, parameter_values)
             self.correction_factor2 = basics.calculate_correction_factor2(self.data, parameter_values)
-
-            self.i = -9999999  # harakiri. should not need this anymore (only for adaptive phase.)
-        # set state for cases and other stuff like Rt, cfs and whatever is there Oo
+            self.i = -9999999  # harakiri solution
 
 
 
@@ -310,18 +297,13 @@ class LatentVariables:
 
 
     def initialize_values(self, data, fix_latent_variable=False, parameter_values=None):
-        # import pudb;pu.db
         if self.model == 'cases':
-            # values = stats.poisson.rvs(data['reported_cases'].to_numpy()*10)
             values = data['cases'].to_numpy()
         elif self.model == 'infections':
-            # if simulated data, the real data are available....therefore best initializations
-
             # multiply deaths data with inverse pi_D and shift it
             # problem are the very small values: e.g. 1: then we force that we observe at least pi_D**-1 cases. this is especially for the start a problem
             values = (data['deaths'] + 1)  # +1 to get rid of multiplication with 0
             values[values <= 2] = 0.2
-            # values *= (parameter_values['pi_D']**-1) 
             values *= (0.005**-1) 
             countries = data.country.unique()
             dd = values[data.country == countries[0]]
@@ -336,14 +318,11 @@ class LatentVariables:
                 d_smooth = np.convolve(d, np.ones(7)/7, mode='same')
                 dd = np.concatenate((dd, d_smooth)).round() + 1
             values = dd
-
-
         if not fix_latent_variable:
             values = stats.poisson.rvs(values) + 1
         elif fix_latent_variable:
             values = data['infections'].to_numpy()
         return(values)
-         # muss noch intialisiert werden
 
 
     def initialize_blocks(self, country, nb_blocks = 10):
