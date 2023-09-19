@@ -229,7 +229,7 @@ data_all_datasets <- rbindlist(data_all_datasets, idcol = "dataset")
 
 
 
-plot_pp_ds3countryA_infs_rCases <- parallel::mcmapply(function(ds, ser, cc, title){
+plot_ds3countryA_infs_rCases <- parallel::mcmapply(function(ds, ser, cc, title){
   g <- data_all_datasets[dataset == ds & series == ser & country == cc] %>% 
     ggplot(aes(x = date)) + 
     geom_ribbon(aes(ymin = q_l, ymax = q_u), fill = "steelblue3", alpha = 0.3)+
