@@ -2,7 +2,6 @@
 # 1. function to plot everything in one plot
 # 2. the same as 1. but without orhwe stuff - not in the manuscript, only used in presentations for didactical reasons
 # 3. script to plot the NPIs  
-
 require(data.table)
 require(ggplot2)
 require(magrittr)
@@ -113,14 +112,11 @@ plot_time_series <- function(dataset, interventions, scale_deaths=20,
 
 d <- fread("../data/real_data.csv")
 ints <- names(d)[15:19]
-plot_time_series(d[country == "France"], ints, xpos_shift = 30)
-plot_time_series(d[country == "Germany"], ints, xpos_shift = 30)
-plot_time_series(d[country == "Italy"], ints, xpos_shift = 30)
-plot_time_series(d[country == "Spain"], ints, xpos_shift = 30)
-plot_time_series(d[country == "UnitedKingdom"], ints, xpos_shift = 30)
+g <- plot_time_series(d[country == "UnitedKingdom"], ints, xpos_shift = 30)
 
 
-ggsave("~/Desktop/plot_all_series_UK.pdf",width = 15, height = 8.5)
+# please note, that the legend in the manuscript is created by hand as ggplot cannot arrange it in the expected way
+ggsave("plot_all_series_UK.pdf",width = 15, height = 8.5)
 
 
 
@@ -129,7 +125,7 @@ ggsave("~/Desktop/plot_all_series_UK.pdf",width = 15, height = 8.5)
 
 #################################################################################
 # same plot but with invisible lines and no sec axis
-#(only used in presentations) - same plot but alpha is set to zero
+#(not used in the paper, but for didactical reasons usefull e.g. in presentations)
 #################################################################################
 
 plot_time_series_less_stuff <- function(dataset, interventions, scale_deaths=20, 
@@ -262,7 +258,7 @@ ddd[value == 0, value := NA]
 
 npi_names <- c("School closure", "Gatherings", "Lockdown", "Subsequent lockdown","General behavioral changes")
 
-ggplot(ddd)+
+g <- ggplot(ddd)+
   geom_line(aes(date, value, color = variable),size=2, lineend = "round")+
   facet_wrap(~country)+
   scale_y_continuous(labels=npi_names)+
@@ -272,13 +268,4 @@ ggplot(ddd)+
   theme(axis.text.x = element_text(angle=45, hjust = 0.8))
 
   
-ggsave("/plots_NPIs_europe.pdf", width = 10, height = 8)
-
-
-
-
-
-
-
-
-
+ggsave("plots_NPIs_europe.pdf", g, width = 10, height = 8)
