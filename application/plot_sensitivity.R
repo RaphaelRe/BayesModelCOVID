@@ -9,6 +9,7 @@ PATH_RESULTS = "results/sensitivity_analysis/"
 PATH_DATA = "../data/real_data.csv"
 PATH_PLOTS = "plots/sensitivity_analysis/"  # assumes an existing directory
 
+if (!dir.exists(PATH_PLOTS)) dir.create(PATH_PLOTS, recursive = T)
 
 INTERVENTIONS = list.files(paste0(PATH_RESULTS, "high_cont/")) %>% grep("alpha",.) %>% 
   (function(x)list.files(paste0(PATH_RESULTS, "high_cont/"))[x]) %>% 

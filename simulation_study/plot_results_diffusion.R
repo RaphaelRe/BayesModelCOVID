@@ -13,6 +13,9 @@ PATH_DATA = "../data/simulated_data/diffusion/data_sim_5NPIs_1_diffusion.csv"
 PATH_DATA_PART = "../data/simulated_data/diffusion/"
 PATH_PLOTS = "plots/diffusion/"
 
+if (!dir.exists(PATH_PLOTS)) dir.create(PATH_PLOTS, recursive = T)
+
+
 N_datasets <- list.files(PATH_RESULTS) %>% length
 
 

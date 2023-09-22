@@ -10,6 +10,7 @@ PATH_RESULTS = "results/main_results/"
 PATH_DATA = "../data/real_data.csv"
 PATH_PLOTS = "plots/main_results/"
 
+if (!dir.exists(PATH_PLOTS)) dir.create(PATH_PLOTS, recursive = T)
 
 # get all interventions
 INTERVENTIONS = list.files(PATH_RESULTS) %>% grep("alpha",.) %>% 
