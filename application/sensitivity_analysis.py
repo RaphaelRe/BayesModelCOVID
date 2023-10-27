@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import warnings
 import pandas as pd
 from toolz.dicttoolz import valmap
 import time
@@ -435,7 +436,7 @@ if __name__ == '__main__':
 
     config_list = list(zip(configs, chains, paths, data_files, seeds))
 
-    np.seterr('ignore')
+    np.seterr('ignore'); warnings.filterwarnings('ignore')
     t = time.time()
     with multiprocessing.Pool(CORES) as pool:
         res = pool.starmap(run_configuration, config_list)

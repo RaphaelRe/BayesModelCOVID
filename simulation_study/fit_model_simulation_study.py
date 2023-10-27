@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import warnings
 import pandas as pd
 from toolz.dicttoolz import valmap
 import time
@@ -331,7 +332,7 @@ if __name__ == '__main__':
     seeds = np.random.randint(1, 999999, size=len(chains)).tolist()
 
     args_list = list(zip(result_paths, datasets, chains, seeds))
-    np.seterr('ignore')
+    np.seterr('ignore'); warnings.filterwarnings('ignore')
 
     t = time.time()
     with multiprocessing.Pool(CORES) as pool:
@@ -348,7 +349,8 @@ if __name__ == '__main__':
     seeds = np.random.randint(1, 999999, size=len(chains)).tolist()
 
     args_list = list(zip(result_paths, datasets, chains, seeds))
-    np.seterr('ignore')
+    np.seterr('ignore'); warnings.filterwarnings('ignore')
+
 
     t2 = time.time()
     with multiprocessing.Pool(CORES) as pool:

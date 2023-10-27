@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import warnings
 import pandas as pd
 from toolz.dicttoolz import valmap
 import time
@@ -374,7 +375,7 @@ if __name__ == '__main__':
     # import pudb; pu.db
     # run_chain('chain1', path, data_file, 123)
 
-    np.seterr('ignore')
+    np.seterr('ignore'); warnings.filterwarnings('ignore')
     with multiprocessing.Pool(CORES) as pool:
         res = pool.starmap(run_chain, [(f'chain{i+1}', path, data_file, rnd_seed) for i, rnd_seed in enumerate(seeds)])
 
