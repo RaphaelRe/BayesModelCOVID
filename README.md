@@ -11,7 +11,7 @@ This repo contains 4 directories:
 * `model`
 * `simulation_study`
 
-Results from the paper can be reproduced using `reproduce_results.sh`. Please note, that a long runtime is required. All R packages and, for python, a virtual environment `venv` with all installed dependencies is assumed to exist.
+Results from the paper can be reproduced using `reproduce_results.sh`. Please note, that a long runtime is required. All R packages and, for python, a virtual environment `virtualenv` with all installed dependencies is assumed to exist.
 Results from the sampled Markov chain can be found at [https://doi.org/10.6084/m9.figshare.24183246.v1](https://doi.org/10.6084/m9.figshare.24183246.v1).
 
 ### application
