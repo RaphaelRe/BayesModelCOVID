@@ -19,7 +19,7 @@ library(ggplot2)
 set.seed(123)
 
 # number of generated datasets
-N_DATASETS <- 5
+N_DATASETS <- 100
 
 ### other parameters
 N_COUNTRY <- 10
