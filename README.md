@@ -11,6 +11,8 @@ This repo contains 4 directories:
 * `model`
 * `simulation_study`
 
+Results from the paper can be reproduced using `reproduce_results.sh`. Please note, that a long runtime is required. All R packages and, for python, a virtual environment `venv` with all installed dependencies is assumed to exist.
+Results from the sampled Markov chain can be found at [https://doi.org/10.6084/m9.figshare.24183246.v1](https://doi.org/10.6084/m9.figshare.24183246.v1).
 
 ### application
 Contains the files to fit the model to the real data:
@@ -66,7 +68,7 @@ To fit the models run of the files
 - `fit_model_simulation_study_diffusion.py`: Fits the model (which assumes aggregated data) on stratified data
 
 
-Also Note that the calculation time and resources vary depending on the length of the chains, number of sampled chains and used cores.
+The calculation time and resources vary depending on the length of the chains, number of sampled chains and used cores.
 It is recommended to run short chains (e.g. 1000 iterations) to get an approximate sampling time.
 The code uses multiple cores. Please make sure to set an appropriate number.
 Despite the parallelization , the calculation time is rather high as the sampling is mainly done in python. The complexity of the model requires a sufficient number of iterations with thinning due to high autocorrelations. The time horizon is probably, depending on the machine and number of cores, 1 to several days. Also note that the written results require some free space: ~3GB for the application and ~137GB for the full simulation study (both scripts).
