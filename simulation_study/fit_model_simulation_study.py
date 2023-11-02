@@ -282,7 +282,8 @@ def run_chain(path, file_name, chain, seed):
     if os.path.exists(path_results):
         print('Attention! Result path exists. Results may get overwritten!')
     else:
-        os.makedirs(path_results)
+        os.makedirs(path_results, exist_ok=True)
+
 
     print('writing results to:')
     print(path_results)
