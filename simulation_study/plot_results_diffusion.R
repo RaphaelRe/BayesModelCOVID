@@ -9,7 +9,6 @@ library(cowplot)
 CORES <- 50
 
 PATH_RESULTS = "results/diffusion/"
-PATH_DATA = "../data/simulated_data/diffusion/data_sim_5NPIs_1_diffusion.csv"
 PATH_DATA_PART = "../data/simulated_data/diffusion/"
 PATH_PLOTS = "plots/diffusion/"
 
@@ -26,7 +25,8 @@ INTERVENTIONS = list.files(paste0(PATH_RESULTS, "res_dataset_1/")) %>% grep("alp
   unique() %>% setdiff("alpha.txt")
 
 # get all countries
-ccs = fread(PATH_DATA)$country %>% unique()
+ccs = fread(paste0(PATH_DATA_PART, "/data_sim_5NPIs_1_diffusion.csv"))$country %>% unique()
+
 
 
 # reads for a parameter all chains apply thinning and returns a meldted data frame

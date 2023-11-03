@@ -8,7 +8,6 @@ library(cowplot)
 CORES <- 50 # cores for parallelization
 
 PATH_RESULTS = "results/standard/"
-PATH_DATA = "../data/simulated_data/standard/data_sim_5NPIs_1.csv"
 PATH_DATA_PART = "../data/simulated_data/standard/"
 PATH_PLOTS = "plots/standard/"
 
@@ -24,7 +23,8 @@ INTERVENTIONS = list.files(paste0(PATH_RESULTS, "res_dataset_1/")) %>% grep("alp
   unique() %>% setdiff("alpha.txt")
 
 # get all countries
-ccs = fread(PATH_DATA)$country %>% unique()
+ccs = fread(paste0(PATH_DATA_PART, "/data_sim_5NPIs_1.csv"))$country %>% unique()
+
 
 # reads for a parameter all chains apply thinning and returns data table with info
 get_chains = function(parameter = "alpha_NPI1_mean", dataset="res_dataset_1",
